@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Coach {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  groups    Group[]
+  createdAt DateTime @default(now())
+}
+
+model Group {
+  id           String         @id @default(uuid())
+  name         String
+  coach        Coach          @relation(fields: [coachId], references: [id])
+  coachId      String
+  createdAt    DateTime       @default(now())
+  TrainingPlan TrainingPlan[]
+}
+
+model TrainingPlan {
+  id        String    @id @default(uuid())
+  group     Group     @relation(fields: [groupId], references: [id])
+  groupId   String
+  title     String
+  date      DateTime
+  sections  Section[]
+  createdAt DateTime  @default(now())
+}
+
+model Section {
+  id             String       @id @default(uuid())
+  trainingPlan   TrainingPlan @relation(fields: [trainingPlanId], references: [id])
+  trainingPlanId String
+  type           String // "warmup", "main", "games", "ending"
+  exercises      Exercise[]
+}
+
+model Exercise {
+  id          String   @id @default(uuid())
+  section     Section  @relation(fields: [sectionId], references: [id])
+  sectionId   String
+  title       String
+  description String
+  diagramSvg  String? // SVG string
+  createdBy   String // "manual" | "groq"
+  createdAt   DateTime @default(now())
+}
