@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 export default function AuthPage() {
   const [tab, setTab] = useState<"signin" | "register">("signin");
+  const t = useTranslations("AuthPage");
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-orange-100">
@@ -12,9 +14,7 @@ export default function AuthPage() {
           <div className="rounded-full bg-orange-500 w-14 h-14 flex items-center justify-center mb-2 shadow">
             <span className="text-2xl text-white font-bold">🏀</span>
           </div>
-          <h2 className="text-2xl font-bold text-blue-900">
-            Basketball Coach App
-          </h2>
+          <h2 className="text-2xl font-bold text-blue-900">{t("appName")}</h2>
         </div>
         <div className="flex w-full mb-6">
           <button
@@ -25,7 +25,7 @@ export default function AuthPage() {
             }`}
             onClick={() => setTab("signin")}
           >
-            Sign In
+            {t("signIn")}
           </button>
           <button
             className={`flex-1 py-2 rounded-r-lg font-semibold transition ${
@@ -35,55 +35,55 @@ export default function AuthPage() {
             }`}
             onClick={() => setTab("register")}
           >
-            Register
+            {t("register")}
           </button>
         </div>
         {tab === "signin" ? (
           <form className="w-full flex flex-col gap-4">
             <input
               type="email"
-              placeholder="Email"
+              placeholder={t("email")}
               className="border rounded px-3 py-2"
             />
             <input
               type="password"
-              placeholder="Password"
+              placeholder={t("password")}
               className="border rounded px-3 py-2"
             />
             <button
               type="submit"
               className="bg-orange-500 text-white py-2 rounded font-semibold hover:bg-orange-600 transition"
             >
-              Sign In
+              {t("signIn")}
             </button>
           </form>
         ) : (
           <form className="w-full flex flex-col gap-4">
             <input
               type="text"
-              placeholder="Name"
+              placeholder={t("name")}
               className="border rounded px-3 py-2"
             />
             <input
               type="email"
-              placeholder="Email"
+              placeholder={t("email")}
               className="border rounded px-3 py-2"
             />
             <input
               type="password"
-              placeholder="Password"
+              placeholder={t("password")}
               className="border rounded px-3 py-2"
             />
             <button
               type="submit"
               className="bg-blue-700 text-white py-2 rounded font-semibold hover:bg-blue-800 transition"
             >
-              Register
+              {t("register")}
             </button>
           </form>
         )}
         <Link href="/" className="mt-6 text-blue-700 hover:underline text-sm">
-          Back to Home
+          {t("backToHome")}
         </Link>
       </div>
     </div>

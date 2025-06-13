@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 export default async function LandingPage() {
   const t = await getTranslations("HomePage");
+  const tLang = await getTranslations("LanguageSwitcher");
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-orange-100">
       <div className="flex gap-2 absolute top-4 right-4">
@@ -11,14 +12,14 @@ export default async function LandingPage() {
           locale="en"
           className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-sm"
         >
-          English
+          {tLang("en")}
         </Link>
         <Link
           href="/"
           locale="he"
           className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-sm"
         >
-          עברית
+          {tLang("he")}
         </Link>
       </div>
       <header className="mb-10 flex flex-col items-center">
@@ -39,7 +40,7 @@ export default async function LandingPage() {
         {t("signInRegister")}
       </Link>
       <footer className="mt-auto text-gray-400 text-xs py-4">
-        &copy; {new Date().getFullYear()} Basketball Coach App
+        &copy; {new Date().getFullYear()} {t("footer")}
       </footer>
     </div>
   );
