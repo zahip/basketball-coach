@@ -6,11 +6,13 @@
     "footer": "Basketball Coach App"
   },
   "DashboardPage": {
+    "appName": "Basketball Coach App",
     "welcome": "Welcome, Coach!",
     "manageTeams": "Here you can manage your basketball teams and training plans.",
     "createTeam": "+ Create New Team",
     "yourTeams": "Your Teams",
-    "noTeams": "No teams yet. Start by creating a new team!"
+    "noTeams": "No teams yet. Start by creating a new team!",
+    "logout": "Logout"
   },
   "AuthPage": {
     "appName": "Basketball Coach App",

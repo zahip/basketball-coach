@@ -6,11 +6,17 @@
     "footer": "מאמן כדורסל"
   },
   "DashboardPage": {
+    "appName": "אפליקציית מאמן כדורסל",
     "welcome": "ברוך הבא, מאמן!",
     "manageTeams": "כאן תוכל לנהל קבוצות ומערכי אימון בכדורסל.",
     "createTeam": "+ צור קבוצה חדשה",
     "yourTeams": "הקבוצות שלך",
-    "noTeams": "אין עדיין קבוצות. התחל ביצירת קבוצה חדשה!"
+    "noTeams": "אין עדיין קבוצות. התחל ביצירת קבוצה חדשה!",
+    "logout": "התנתק",
+    "trainingPlans": "תוכניות אימון",
+    "statistics": "סטטיסטיקות",
+    "trainingPlansDescription": "תיאור תוכניות האימון",
+    "statisticsDescription": "תיאור סטטיסטיקות"
   },
   "AuthPage": {
     "appName": "מאמן כדורסל",
