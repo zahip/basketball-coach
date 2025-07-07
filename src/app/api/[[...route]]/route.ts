@@ -13,6 +13,39 @@ const appRouter = t.router({
   echo: t.procedure
     .input(z.object({ text: z.string() }))
     .query(({ input }) => ({ echo: input.text })),
+  userUpsert: t.procedure.mutation(async () => {
+    console.log("userUpsert");
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    console.log("supabase", supabase);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    console.log("user", user);
+    if (!user) {
+      throw new Error("Not authenticated");
+    }
+    const { prisma } = await import("@/lib/prisma");
+    const dbUser = await prisma.user.upsert({
+      where: { supabaseId: user.id },
+      update: {
+        email: user.email ?? "",
+        name: user.user_metadata?.name || null,
+        avatarUrl: user.user_metadata?.avatar_url || null,
+      },
+      create: {
+        supabaseId: user.id,
+        email: user.email ?? "",
+        name: user.user_metadata?.name || null,
+        avatarUrl: user.user_metadata?.avatar_url || null,
+        provider:
+          typeof user.app_metadata?.provider === "string"
+            ? user.app_metadata.provider
+            : "email",
+      },
+    });
+    return { success: true, user: dbUser };
+  }),
 });
 export type AppRouter = typeof appRouter;
 

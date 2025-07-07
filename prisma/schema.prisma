@@ -14,10 +14,26 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model User {
+  id         String   @id @default(uuid())
+  supabaseId String   @unique // Supabase auth user ID
+  email      String   @unique
+  name       String?
+  avatarUrl  String?
+  provider   String   @default("email") // "email", "google", etc.
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  coach Coach?
+}
+
 model Coach {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @unique
   groups    Group[]
   createdAt DateTime @default(now())
 }
