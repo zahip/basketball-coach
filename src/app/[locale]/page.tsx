@@ -3,25 +3,10 @@ import { getTranslations } from "next-intl/server";
 
 export default async function LandingPage() {
   const t = await getTranslations("HomePage");
-  const tLang = await getTranslations("LanguageSwitcher");
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-orange-100">
-      <div className="flex gap-2 absolute top-4 right-4">
-        <Link
-          href="/"
-          locale="en"
-          className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-sm"
-        >
-          {tLang("en")}
-        </Link>
-        <Link
-          href="/"
-          locale="he"
-          className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-sm"
-        >
-          {tLang("he")}
-        </Link>
-      </div>
+      <div className="flex gap-2 absolute top-4 right-4"></div>
       <header className="mb-10 flex flex-col items-center">
         <div className="rounded-full bg-orange-500 w-20 h-20 flex items-center justify-center mb-4 shadow-lg">
           <span className="text-4xl text-white font-bold">🏀</span>
