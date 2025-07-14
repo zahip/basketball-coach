@@ -18,6 +18,13 @@
     "trainingPlansDescription": "תיאור תוכניות האימון",
     "statisticsDescription": "תיאור סטטיסטיקות"
   },
+  "TeamPage": {
+    "teamDashboard": "לוח בקרת קבוצה",
+    "players": "שחקנים",
+    "addPlayer": "הוסף שחקן",
+    "noPlayers": "אין עדיין שחקנים. הוסף את השחקן הראשון שלך כדי להתחיל!",
+    "trainingSet": "מערכי אימון"
+  },
   "AuthPage": {
     "appName": "מאמן כדורסל",
     "signIn": "התחבר",

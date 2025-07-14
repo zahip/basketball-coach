@@ -6,14 +6,14 @@ import { LogoutButton } from "@/components/LogoutButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DashboardContent } from "@/components/DashboardContent";
+import { TeamDashboard } from "@/components/TeamDashboard";
 
-export default async function DashboardPage({
+export default async function TeamPage({
   params,
 }: {
-  params: Promise<{ locale: string }>;
+  params: Promise<{ locale: string; teamId: string }>;
 }) {
-  const { locale } = await params;
+  const { locale, teamId } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,21 +25,23 @@ export default async function DashboardPage({
 
   const t = await getTranslations({
     locale: locale,
-    namespace: "DashboardPage",
+    namespace: "TeamPage",
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-100 flex flex-col bg-red-500">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-100 flex flex-col">
       {/* Header */}
       <header className="w-full border-b bg-white/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 px-4 py-4">
           {/* App logo and title */}
           <div className="flex items-center gap-3">
-            <div className="rounded-full bg-orange-500 w-12 h-12 flex items-center justify-center shadow">
-              <span className="text-2xl text-white font-bold">🏀</span>
-            </div>
+            <Link href={`/dashboard`}>
+              <div className="rounded-full bg-orange-500 w-12 h-12 flex items-center justify-center shadow cursor-pointer hover:bg-orange-600 transition-colors">
+                <span className="text-2xl text-white font-bold">🏀</span>
+              </div>
+            </Link>
             <h1 className="text-2xl font-extrabold text-blue-900">
-              {t("welcome")}
+              Team Dashboard
             </h1>
           </div>
           {/* User info and logout */}
@@ -67,9 +69,10 @@ export default async function DashboardPage({
           </div>
         </div>
       </header>
+      
       {/* Main Content */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-8">
-        <DashboardContent locale={locale} />
+        <TeamDashboard teamId={teamId} />
       </main>
     </div>
   );
