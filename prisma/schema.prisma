@@ -78,14 +78,15 @@ model Exercise {
 }
 
 model Team {
-  id          String    @id @default(uuid())
+  id          String          @id @default(uuid())
   name        String
   description String?
-  coach       Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coach       Coach           @relation(fields: [coachId], references: [id], onDelete: Cascade)
   coachId     String
   players     Player[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  recordings  PlayRecording[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 }
 
 model Player {
@@ -99,4 +100,14 @@ model Player {
   updatedAt DateTime @updatedAt
 
   @@unique([teamId, number])
+}
+
+model PlayRecording {
+  id        String   @id @default(uuid())
+  name      String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  data      Json     // Store the recording data as JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

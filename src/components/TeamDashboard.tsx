@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { AddPlayerModal } from "@/components/AddPlayerModal";
+import { BasketballCourt } from "@/components/BasketballCourt";
 
 interface TeamDashboardProps {
   teamId: string;
@@ -92,6 +93,9 @@ export function TeamDashboard({ teamId }: TeamDashboardProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Interactive Court Section */}
+      <BasketballCourt teamId={teamId} />
 
       {/* Training Sets Section */}
       <Card className="shadow-lg border-l-4 border-blue-500">

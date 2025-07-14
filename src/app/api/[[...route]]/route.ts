@@ -203,6 +203,138 @@ const appRouter = t.router({
       
       return { success: true, player };
     }),
+  testConnection: t.procedure.query(async () => {
+    try {
+      console.log("Testing Prisma client...");
+      console.log("Prisma object keys:", Object.keys(prisma));
+      console.log("playRecording exists:", !!prisma.playRecording);
+      
+      const result = await prisma.$queryRaw`SELECT 1 as test`;
+      
+      // Try to count existing records
+      const count = await prisma.playRecording.count();
+      console.log("PlayRecording count:", count);
+      
+      return { success: true, result, count, hasPlayRecording: !!prisma.playRecording };
+    } catch (error) {
+      console.error("Database connection test failed:", error);
+      return { success: false, error: error.message };
+    }
+  }),
+  savePlayRecording: t.procedure
+    .input(z.object({
+      teamId: z.string(),
+      name: z.string(),
+      data: z.object({
+        movements: z.array(z.object({
+          playerId: z.string(),
+          x: z.number(),
+          y: z.number(),
+          timestamp: z.number(),
+        })),
+        actions: z.array(z.object({
+          id: z.string(),
+          type: z.enum(["pass", "shoot", "cut", "block", "screen", "dribble"]),
+          playerId: z.string(),
+          startX: z.number(),
+          startY: z.number(),
+          endX: z.number(),
+          endY: z.number(),
+          timestamp: z.number(),
+          color: z.string(),
+        })),
+        players: z.array(z.object({
+          id: z.string(),
+          x: z.number(),
+          y: z.number(),
+          type: z.enum(["offense", "defense"]),
+          number: z.number().optional(),
+          name: z.string().optional(),
+        })),
+        duration: z.number(),
+      }),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw new Error("User not found in database");
+      }
+
+      const team = await prisma.team.findFirst({
+        where: {
+          id: input.teamId,
+          coach: {
+            userId: dbUser.id
+          }
+        }
+      });
+
+      if (!team) {
+        throw new Error("Team not found");
+      }
+
+      console.log("About to create recording...");
+      console.log("Input data:", JSON.stringify(input, null, 2));
+      
+      try {
+        const recording = await prisma.playRecording.create({
+          data: {
+            name: input.name,
+            teamId: input.teamId,
+            data: input.data,
+          },
+        });
+        console.log("Recording created successfully:", recording.id);
+        return { success: true, recording };
+      } catch (createError) {
+        console.error("Failed to create recording:", createError);
+        throw new Error(`Failed to create recording: ${createError.message}`);
+      }
+    }),
+  getPlayRecordings: t.procedure
+    .input(z.object({ teamId: z.string() }))
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw new Error("User not found in database");
+      }
+
+      const recordings = await prisma.playRecording.findMany({
+        where: {
+          team: {
+            id: input.teamId,
+            coach: {
+              userId: dbUser.id
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      return { recordings };
+    }),
 });
 export type AppRouter = typeof appRouter;
 
