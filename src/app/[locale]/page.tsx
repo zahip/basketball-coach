@@ -25,7 +25,7 @@ export default async function LandingPage() {
         {t("signInRegister")}
       </Link>
       <footer className="mt-auto text-gray-400 text-xs py-4">
-        &copy; {new Date().getFullYear()} {t("footer")}
+        <span suppressHydrationWarning>&copy; {new Date().getFullYear()}</span> {t("footer")}
       </footer>
     </div>
   );

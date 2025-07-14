@@ -218,7 +218,7 @@ const appRouter = t.router({
       return { success: true, result, count, hasPlayRecording: !!prisma.playRecording };
     } catch (error) {
       console.error("Database connection test failed:", error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }),
   savePlayRecording: t.procedure
@@ -298,7 +298,7 @@ const appRouter = t.router({
         return { success: true, recording };
       } catch (createError) {
         console.error("Failed to create recording:", createError);
-        throw new Error(`Failed to create recording: ${createError.message}`);
+        throw new Error(`Failed to create recording: ${createError instanceof Error ? createError.message : String(createError)}`);
       }
     }),
   getPlayRecordings: t.procedure
@@ -334,6 +334,363 @@ const appRouter = t.router({
       });
 
       return { recordings };
+    }),
+  createTrainingSet: t.procedure
+    .input(z.object({
+      teamId: z.string(),
+      name: z.string().min(1, "Training set name is required"),
+      description: z.string().optional(),
+      exercises: z.array(z.object({
+        name: z.string().min(1, "Exercise name is required"),
+        description: z.string().optional(),
+        duration: z.number().optional(),
+        category: z.string().optional(),
+        order: z.number().default(0),
+      })).default([]),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw new Error("User not found in database");
+      }
+
+      const team = await prisma.team.findFirst({
+        where: {
+          id: input.teamId,
+          coach: {
+            userId: dbUser.id
+          }
+        }
+      });
+
+      if (!team) {
+        throw new Error("Team not found");
+      }
+
+      const trainingSet = await prisma.trainingSet.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          teamId: input.teamId,
+          exercises: {
+            create: input.exercises.map((exercise, index) => ({
+              name: exercise.name,
+              description: exercise.description,
+              duration: exercise.duration,
+              category: exercise.category,
+              order: exercise.order || index,
+            }))
+          }
+        },
+        include: {
+          exercises: {
+            orderBy: { order: 'asc' }
+          }
+        }
+      });
+
+      return { success: true, trainingSet };
+    }),
+  getTrainingSets: t.procedure
+    .input(z.object({ teamId: z.string() }))
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw new Error("User not found in database");
+      }
+
+      const trainingSets = await prisma.trainingSet.findMany({
+        where: {
+          team: {
+            id: input.teamId,
+            coach: {
+              userId: dbUser.id
+            }
+          }
+        },
+        include: {
+          exercises: {
+            orderBy: { order: 'asc' }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      return { trainingSets };
+    }),
+  getAllTrainingSets: t.procedure.query(async () => {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("Not authenticated");
+    }
+    
+    const dbUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    });
+    if (!dbUser) {
+      throw new Error("User not found in database");
+    }
+
+    const coach = await prisma.coach.findUnique({
+      where: { userId: dbUser.id },
+      include: {
+        teams: {
+          include: {
+            trainingSets: {
+              include: {
+                exercises: {
+                  orderBy: { order: 'asc' }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    const allTrainingSets = coach?.teams.flatMap(team => 
+      team.trainingSets.map(trainingSet => ({
+        ...trainingSet,
+        teamName: team.name
+      }))
+    ) || [];
+
+    return { trainingSets: allTrainingSets };
+  }),
+  createExerciseTemplate: t.procedure
+    .input(z.object({
+      name: z.string().min(1, "Exercise name is required"),
+      description: z.string().optional(),
+      duration: z.number().optional(),
+      category: z.string().optional(),
+      difficulty: z.string().optional(),
+      equipment: z.string().optional(),
+      instructions: z.string().optional(),
+      isPublic: z.boolean().default(false),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw new Error("User not found in database");
+      }
+
+      let coach = await prisma.coach.findUnique({
+        where: { userId: dbUser.id }
+      });
+      
+      if (!coach) {
+        coach = await prisma.coach.create({
+          data: {
+            name: user.user_metadata?.name || user.email || "Coach",
+            email: user.email || "",
+            userId: dbUser.id,
+          }
+        });
+      }
+
+      const exerciseTemplate = await prisma.exerciseTemplate.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          duration: input.duration,
+          category: input.category,
+          difficulty: input.difficulty,
+          equipment: input.equipment,
+          instructions: input.instructions,
+          isPublic: input.isPublic,
+          coachId: coach.id,
+        },
+      });
+
+      return { success: true, exerciseTemplate };
+    }),
+  getExerciseTemplates: t.procedure.query(async () => {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("Not authenticated");
+    }
+    
+    const dbUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    });
+    if (!dbUser) {
+      throw new Error("User not found in database");
+    }
+
+    const coach = await prisma.coach.findUnique({
+      where: { userId: dbUser.id }
+    });
+    
+    if (!coach) {
+      return { exerciseTemplates: [] };
+    }
+
+    const exerciseTemplates = await prisma.exerciseTemplate.findMany({
+      where: {
+        OR: [
+          { coachId: coach.id },
+          { isPublic: true }
+        ]
+      },
+      include: {
+        coach: {
+          select: {
+            name: true,
+            email: true,
+          }
+        }
+      },
+      orderBy: [
+        { usageCount: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    });
+
+    return { exerciseTemplates };
+  }),
+  updateExerciseTemplate: t.procedure
+    .input(z.object({
+      id: z.string(),
+      name: z.string().min(1, "Exercise name is required"),
+      description: z.string().optional(),
+      duration: z.number().optional(),
+      category: z.string().optional(),
+      difficulty: z.string().optional(),
+      equipment: z.string().optional(),
+      instructions: z.string().optional(),
+      isPublic: z.boolean().default(false),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw new Error("User not found in database");
+      }
+
+      const coach = await prisma.coach.findUnique({
+        where: { userId: dbUser.id }
+      });
+      
+      if (!coach) {
+        throw new Error("Coach not found");
+      }
+
+      const exerciseTemplate = await prisma.exerciseTemplate.findFirst({
+        where: {
+          id: input.id,
+          coachId: coach.id
+        }
+      });
+
+      if (!exerciseTemplate) {
+        throw new Error("Exercise template not found or not owned by this coach");
+      }
+
+      const updatedExerciseTemplate = await prisma.exerciseTemplate.update({
+        where: { id: input.id },
+        data: {
+          name: input.name,
+          description: input.description,
+          duration: input.duration,
+          category: input.category,
+          difficulty: input.difficulty,
+          equipment: input.equipment,
+          instructions: input.instructions,
+          isPublic: input.isPublic,
+        },
+      });
+
+      return { success: true, exerciseTemplate: updatedExerciseTemplate };
+    }),
+  deleteExerciseTemplate: t.procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw new Error("User not found in database");
+      }
+
+      const coach = await prisma.coach.findUnique({
+        where: { userId: dbUser.id }
+      });
+      
+      if (!coach) {
+        throw new Error("Coach not found");
+      }
+
+      const exerciseTemplate = await prisma.exerciseTemplate.findFirst({
+        where: {
+          id: input.id,
+          coachId: coach.id
+        }
+      });
+
+      if (!exerciseTemplate) {
+        throw new Error("Exercise template not found or not owned by this coach");
+      }
+
+      await prisma.exerciseTemplate.delete({
+        where: { id: input.id }
+      });
+
+      return { success: true };
     }),
 });
 export type AppRouter = typeof appRouter;

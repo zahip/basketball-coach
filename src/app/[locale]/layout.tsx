@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TRPCProvider } from "@/lib/trpc-provider";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
-import { setRequestLocale } from "next-intl/server";
+import { setRequestLocale, getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
@@ -39,12 +39,16 @@ export default async function RootLayout({
     notFound();
   }
   setRequestLocale(locale);
+  
+  // Get messages for the current locale
+  const messages = await getMessages();
+  
   return (
     <html lang={locale} dir={locale === "he" ? "rtl" : "ltr"}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NextIntlClientProvider locale={locale}>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           <TRPCProvider>{children}</TRPCProvider>
           <LanguageSwitcher locale={locale} />
         </NextIntlClientProvider>

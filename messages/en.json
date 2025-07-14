@@ -10,10 +10,13 @@
     "welcome": "Welcome, Coach!",
     "manageTeams": "Here you can manage your basketball teams and training plans.",
     "createTeam": "+ Create New Team",
+    "createTrainingSet": "+ Create Training Set",
     "yourTeams": "Your Teams",
     "noTeams": "No teams yet. Start by creating a new team!",
     "trainingPlans": "Training Plans",
     "statistics": "Statistics",
+    "trainingSets": "Training Sets",
+    "noTrainingSets": "No training sets yet. Create your first training set!",
     "logout": "Logout"
   },
   "TeamPage": {

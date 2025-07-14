@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 export default function RootPage() {
-  redirect("/en");
+  return null; // Let middleware handle the redirect
 }

@@ -10,6 +10,7 @@
 - Next.js 15.3.3
 - TypeScript
 - Tailwind CSS
+- Shadcn
 - Prisma ORM
 - Supabase (authentication)
 - tRPC

@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
   await supabase.auth.getUser();
 
   // Protected routes - require authentication
-  const protectedPaths = ["/dashboard", "/team"];
+  const protectedPaths = ["/dashboard", "/team", "/training-set-builder"];
   const isProtectedPath = protectedPaths.some((path) =>
     request.nextUrl.pathname.includes(path)
   );

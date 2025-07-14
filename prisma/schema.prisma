@@ -29,14 +29,15 @@ model User {
 }
 
 model Coach {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String   @unique
-  groups    Group[]
-  teams     Team[]
-  createdAt DateTime @default(now())
+  id               String             @id @default(uuid())
+  name             String
+  email            String             @unique
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String             @unique
+  groups           Group[]
+  teams            Team[]
+  exerciseTemplates ExerciseTemplate[]
+  createdAt        DateTime           @default(now())
 }
 
 model Group {
@@ -78,15 +79,16 @@ model Exercise {
 }
 
 model Team {
-  id          String          @id @default(uuid())
-  name        String
-  description String?
-  coach       Coach           @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  coachId     String
-  players     Player[]
-  recordings  PlayRecording[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id           String          @id @default(uuid())
+  name         String
+  description  String?
+  coach        Coach           @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coachId      String
+  players      Player[]
+  recordings   PlayRecording[]
+  trainingSets TrainingSet[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 }
 
 model Player {
@@ -110,4 +112,47 @@ model PlayRecording {
   data      Json     // Store the recording data as JSON
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model TrainingSet {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId      String
+  exercises   TrainingSetExercise[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TrainingSetExercise {
+  id            String      @id @default(uuid())
+  name          String
+  description   String?
+  duration      Int?        // Duration in minutes
+  category      String?     // "warmup", "skills", "scrimmage", "conditioning", etc.
+  trainingSet   TrainingSet @relation(fields: [trainingSetId], references: [id], onDelete: Cascade)
+  trainingSetId String
+  order         Int         @default(0)
+  exerciseId    String?     // Reference to ExerciseTemplate if created from template
+  exercise      ExerciseTemplate? @relation(fields: [exerciseId], references: [id])
+  createdAt     DateTime    @default(now())
+}
+
+model ExerciseTemplate {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  duration    Int?      // Default duration in minutes
+  category    String?   // "warmup", "skills", "scrimmage", "conditioning", etc.
+  difficulty  String?   // "beginner", "intermediate", "advanced"
+  equipment   String?   // Equipment needed
+  instructions String?  // Detailed instructions
+  coach       Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coachId     String
+  isPublic    Boolean   @default(false) // For future payment features
+  usageCount  Int       @default(0)     // Track how often it's used
+  trainingSetExercises TrainingSetExercise[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
