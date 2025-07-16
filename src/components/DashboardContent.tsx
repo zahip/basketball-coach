@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, TeamCard, StatsCard, FeatureCard } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LoadingState, EmptyState, ErrorState, ListSkeleton } from "@/components/ui/loading";
+import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/loading";
 import { Badge, CountBadge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
 import { CreateTeamModal } from "@/components/CreateTeamModal";
@@ -16,6 +16,8 @@ interface DashboardContentProps {
 
 export function DashboardContent({ locale }: DashboardContentProps) {
   const [showCreateTeam, setShowCreateTeam] = useState(false);
+  
+  // Always call useTranslations, handle errors in the component
   const t = useTranslations("DashboardPage");
   
   const { data: teamsData, isLoading: isLoadingTeams, error: teamsError, refetch } = trpc.getTeams.useQuery();

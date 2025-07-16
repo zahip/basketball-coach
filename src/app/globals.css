@@ -1,61 +1,117 @@
 @import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4 Theme Configuration */
+@theme {
+  /* Design System Colors */
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(222.2 84% 4.9%);
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222.2 84% 4.9%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(222.2 84% 4.9%);
+  --color-primary: hsl(221.2 83.2% 53.3%);
+  --color-primary-foreground: hsl(210 40% 98%);
+  --color-secondary: hsl(210 40% 96%);
+  --color-secondary-foreground: hsl(222.2 84% 4.9%);
+  --color-muted: hsl(210 40% 96%);
+  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
+  --color-accent: hsl(210 40% 96%);
+  --color-accent-foreground: hsl(222.2 84% 4.9%);
+  --color-destructive: hsl(0 84.2% 60.2%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+  --color-border: hsl(214.3 31.8% 91.4%);
+  --color-input: hsl(214.3 31.8% 91.4%);
+  --color-ring: hsl(221.2 83.2% 53.3%);
+  --radius: 0.5rem;
 
-/* Design System CSS Variables */
+  /* Basketball-themed colors */
+  --color-basketball-orange-50: #fff7ed;
+  --color-basketball-orange-100: #ffedd5;
+  --color-basketball-orange-200: #fed7aa;
+  --color-basketball-orange-300: #fdba74;
+  --color-basketball-orange-400: #fb923c;
+  --color-basketball-orange-500: #f97316;
+  --color-basketball-orange-600: #ea580c;
+  --color-basketball-orange-700: #c2410c;
+  --color-basketball-orange-800: #9a3412;
+  --color-basketball-orange-900: #7c2d12;
+  
+  --color-basketball-blue-50: #eff6ff;
+  --color-basketball-blue-100: #dbeafe;
+  --color-basketball-blue-200: #bfdbfe;
+  --color-basketball-blue-300: #93c5fd;
+  --color-basketball-blue-400: #60a5fa;
+  --color-basketball-blue-500: #3b82f6;
+  --color-basketball-blue-600: #2563eb;
+  --color-basketball-blue-700: #1d4ed8;
+  --color-basketball-blue-800: #1e40af;
+  --color-basketball-blue-900: #1e3a8a;
+  
+  --color-basketball-green-50: #f0fdf4;
+  --color-basketball-green-100: #dcfce7;
+  --color-basketball-green-200: #bbf7d0;
+  --color-basketball-green-300: #86efac;
+  --color-basketball-green-400: #4ade80;
+  --color-basketball-green-500: #22c55e;
+  --color-basketball-green-600: #16a34a;
+  --color-basketball-green-700: #15803d;
+  --color-basketball-green-800: #166534;
+  --color-basketball-green-900: #14532d;
+  
+  /* Animation keyframes */
+  --animate-fade-in: fade-in 0.5s ease-in-out;
+  --animate-fade-in-up: fade-in-up 0.5s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-slide-in-right: slide-in-right 0.3s ease-out;
+  --animate-slide-in-left: slide-in-left 0.3s ease-out;
+  
+  /* Custom shadows */
+  --shadow-soft: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+  --shadow-medium: 0 4px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 25px -5px rgba(0, 0, 0, 0.04);
+  --shadow-strong: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Legacy CSS Variables for backwards compatibility */
 @layer base {
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
   }
 }
 
 /* Modern CSS Reset & Base Styles */
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   body {
@@ -200,7 +256,7 @@
 
   /* Better focus ring */
   .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
 
   /* Improved disabled state */
@@ -225,15 +281,15 @@
 /* Component-specific styles */
 @layer components {
   .btn-primary {
-    @apply bg-basketball-orange-500 hover:bg-basketball-orange-600 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:shadow-medium hover:-translate-y-0.5 focus-ring;
+    @apply bg-basketball-orange-500 hover:bg-basketball-orange-600 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:shadow-medium hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
 
   .btn-secondary {
-    @apply bg-basketball-blue-500 hover:bg-basketball-blue-600 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:shadow-medium hover:-translate-y-0.5 focus-ring;
+    @apply bg-basketball-blue-500 hover:bg-basketball-blue-600 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:shadow-medium hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
 
   .btn-success {
-    @apply bg-basketball-green-500 hover:bg-basketball-green-600 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:shadow-medium hover:-translate-y-0.5 focus-ring;
+    @apply bg-basketball-green-500 hover:bg-basketball-green-600 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:shadow-medium hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
 
   .card-enhanced {
@@ -241,7 +297,7 @@
   }
 
   .input-enhanced {
-    @apply bg-background border border-input rounded-lg px-3 py-2 text-sm ring-offset-background transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply bg-background border border-input rounded-lg px-3 py-2 text-sm transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
 
   .modal-backdrop {
