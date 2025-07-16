@@ -2,48 +2,26 @@ import createMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "./i18n/routing";
-import { apiRateLimit, authRateLimit, getClientIP, isAuthBlocked } from "./lib/security";
+import { getClientIP, isAuthBlocked } from "./lib/security";
 
 const intlMiddleware = createMiddleware(routing);
 
 export async function middleware(request: NextRequest) {
   const response = intlMiddleware(request);
   const clientIP = getClientIP(request.clone());
-  
-  // Apply rate limiting based on route
   const pathname = request.nextUrl.pathname;
   
-  // Apply stricter rate limiting for auth endpoints
-  if (pathname.includes('/auth') || pathname.includes('/api/trpc')) {
-    if (pathname.includes('/auth')) {
-      // Check if IP is blocked due to failed auth attempts
-      if (isAuthBlocked(clientIP)) {
-        return NextResponse.json(
-          { error: 'Too many failed authentication attempts. Please try again later.' },
-          { status: 429 }
-        );
-      }
-      
-      const authLimit = await authRateLimit.limit(clientIP);
-      if (!authLimit.success) {
-        return NextResponse.json(
-          { error: 'Too many requests. Please try again later.' },
-          { status: 429 }
-        );
-      }
-    } else {
-      // Regular API rate limiting
-      const apiLimit = await apiRateLimit.limit(clientIP);
-      if (!apiLimit.success) {
-        return NextResponse.json(
-          { error: 'API rate limit exceeded. Please try again later.' },
-          { status: 429 }
-        );
-      }
+  // Simple rate limiting for auth endpoints using in-memory tracking
+  if (pathname.includes('/auth')) {
+    if (isAuthBlocked(clientIP)) {
+      return NextResponse.json(
+        { error: 'Too many failed authentication attempts. Please try again later.' },
+        { status: 429 }
+      );
     }
   }
 
-  // Add security headers to response
+  // Add essential security headers
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-XSS-Protection', '1; mode=block');
@@ -64,7 +42,7 @@ export async function middleware(request: NextRequest) {
             response.cookies.set(name, value, {
               ...options,
               secure: process.env.NODE_ENV === 'production',
-              sameSite: 'strict',
+              sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
               httpOnly: true,
             });
           });
@@ -91,7 +69,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected routes - require authentication
-  const protectedPaths = ["/dashboard", "/team", "/training-set-builder"];
+  const protectedPaths = ["/dashboard", "/team", "/training-set-builder", "/exercise"];
   const isProtectedPath = protectedPaths.some((path) =>
     request.nextUrl.pathname.includes(path)
   );
@@ -111,13 +89,9 @@ export async function middleware(request: NextRequest) {
 
         const redirectUrl = new URL(`/${currentLocale}/auth`, request.url);
         redirectUrl.searchParams.set("next", request.nextUrl.pathname);
-        redirectUrl.searchParams.set("error", "authentication_required");
 
         return NextResponse.redirect(redirectUrl);
       }
-      
-      // Add user context to response headers for logging
-      response.headers.set('X-User-ID', user.id);
       
     } catch (error) {
       console.error('Authentication error:', error);
@@ -128,15 +102,9 @@ export async function middleware(request: NextRequest) {
       const currentLocale = validLocales.includes(locale) ? locale : "en";
 
       const redirectUrl = new URL(`/${currentLocale}/auth`, request.url);
-      redirectUrl.searchParams.set("error", "authentication_error");
-
       return NextResponse.redirect(redirectUrl);
     }
   }
-
-  // Add security logging headers
-  response.headers.set('X-Request-ID', crypto.randomUUID());
-  response.headers.set('X-Timestamp', new Date().toISOString());
 
   return response;
 }

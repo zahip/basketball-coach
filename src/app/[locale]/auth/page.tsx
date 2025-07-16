@@ -11,18 +11,12 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
-  const [isBlocked, setIsBlocked] = useState(false);
   const t = useTranslations("AuthPage");
 
   const supabase = createClient();
   const userUpsert = trpc.userUpsert.useMutation();
 
   const handleGoogleSignIn = async () => {
-    if (isBlocked) {
-      setError("Authentication is temporarily blocked. Please try again later.");
-      return;
-    }
-    
     try {
       setLoading(true);
       setError(null);
@@ -35,11 +29,6 @@ export default function AuthPage() {
       });
 
       if (error) {
-        // Handle rate limiting
-        if (error.message.includes('rate limit') || error.message.includes('Too many')) {
-          setIsBlocked(true);
-          setTimeout(() => setIsBlocked(false), 15 * 60 * 1000); // 15 minutes
-        }
         throw error;
       }
     } catch (error: unknown) {
@@ -54,11 +43,6 @@ export default function AuthPage() {
 
   const handleEmailAuth = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    
-    if (isBlocked) {
-      setError("Authentication is temporarily blocked. Please try again later.");
-      return;
-    }
     
     setLoading(true);
     setError(null);
@@ -93,11 +77,6 @@ export default function AuthPage() {
         });
         
         if (error) {
-          // Handle rate limiting
-          if (error.message.includes('rate limit') || error.message.includes('Too many')) {
-            setIsBlocked(true);
-            setTimeout(() => setIsBlocked(false), 15 * 60 * 1000); // 15 minutes
-          }
           throw error;
         }
         
@@ -117,11 +96,6 @@ export default function AuthPage() {
         });
         
         if (error) {
-          // Handle rate limiting
-          if (error.message.includes('rate limit') || error.message.includes('Too many')) {
-            setIsBlocked(true);
-            setTimeout(() => setIsBlocked(false), 15 * 60 * 1000); // 15 minutes
-          }
           throw error;
         }
         
@@ -162,12 +136,6 @@ export default function AuthPage() {
           </div>
         )}
 
-        {isBlocked && (
-          <div className="w-full mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded text-sm">
-            Authentication is temporarily blocked due to too many failed attempts. Please try again in 15 minutes.
-          </div>
-        )}
-
         {passwordErrors.length > 0 && (
           <div className="w-full mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
             <ul className="list-disc list-inside">
@@ -181,7 +149,7 @@ export default function AuthPage() {
         {/* Google Sign In Button */}
         <button
           onClick={handleGoogleSignIn}
-          disabled={loading || isBlocked}
+          disabled={loading}
           className="w-full mb-6 bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -202,13 +170,11 @@ export default function AuthPage() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          {loading ? "Signing in..." : `Continue with Google`}
+          {loading ? t("loading") : (tab === "signin" ? t("signInWithGoogle") : t("registerWithGoogle"))}
         </button>
 
-        <div className="flex items-center w-full mb-6">
-          <div className="flex-1 h-px bg-gray-300"></div>
-          <span className="px-3 text-gray-500 text-sm">or</span>
-          <div className="flex-1 h-px bg-gray-300"></div>
+        <div className="w-full text-center text-gray-500 text-sm mb-4">
+          {t("or")}
         </div>
 
         <div className="flex w-full mb-6">
@@ -249,7 +215,7 @@ export default function AuthPage() {
               name="name"
               placeholder={t("name")}
               className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={loading || isBlocked}
+              disabled={loading}
               maxLength={50}
               required
             />
@@ -260,7 +226,7 @@ export default function AuthPage() {
             placeholder={t("email")}
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            disabled={loading || isBlocked}
+            disabled={loading}
             maxLength={254}
           />
           <input
@@ -269,7 +235,7 @@ export default function AuthPage() {
             placeholder={t("password")}
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            disabled={loading || isBlocked}
+            disabled={loading}
             maxLength={128}
             minLength={tab === "register" ? 8 : 1}
             onChange={handlePasswordChange}
@@ -290,7 +256,7 @@ export default function AuthPage() {
           
           <button
             type="submit"
-            disabled={loading || isBlocked || (tab === "register" && passwordErrors.length > 0)}
+            disabled={loading || (tab === "register" && passwordErrors.length > 0)}
             className={`py-2 rounded font-semibold transition disabled:opacity-50 ${
               tab === "signin"
                 ? "bg-orange-500 text-white hover:bg-orange-600"
@@ -298,14 +264,19 @@ export default function AuthPage() {
             }`}
           >
             {loading
-              ? "Please wait..."
+              ? t("loading")
               : tab === "signin"
               ? t("signIn")
               : t("register")}
           </button>
         </form>
+      </div>
 
-        <Link href="/" className="mt-6 text-blue-700 hover:underline text-sm">
+      <div className="mt-8">
+        <Link
+          href="/"
+          className="text-blue-700 hover:text-blue-900 font-medium text-sm"
+        >
           {t("backToHome")}
         </Link>
       </div>

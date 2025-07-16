@@ -35,7 +35,11 @@
     "email": "אימייל",
     "password": "סיסמה",
     "name": "שם",
-    "backToHome": "חזרה לדף הבית"
+    "backToHome": "← חזרה לדף הבית",
+    "signInWithGoogle": "התחבר עם Google",
+    "registerWithGoogle": "הרשם עם Google",
+    "loading": "טוען...",
+    "or": "או"
   },
   "LanguageSwitcher": {
     "en": "English",
