@@ -4,17 +4,25 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { trpc } from "@/lib/trpc";
+import { validatePassword, validateEmail } from "@/lib/security";
 
 export default function AuthPage() {
   const [tab, setTab] = useState<"signin" | "register">("signin");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [isBlocked, setIsBlocked] = useState(false);
   const t = useTranslations("AuthPage");
 
   const supabase = createClient();
   const userUpsert = trpc.userUpsert.useMutation();
 
   const handleGoogleSignIn = async () => {
+    if (isBlocked) {
+      setError("Authentication is temporarily blocked. Please try again later.");
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
@@ -26,8 +34,14 @@ export default function AuthPage() {
         },
       });
 
-      console.log("error", error);
-      if (error) throw error;
+      if (error) {
+        // Handle rate limiting
+        if (error.message.includes('rate limit') || error.message.includes('Too many')) {
+          setIsBlocked(true);
+          setTimeout(() => setIsBlocked(false), 15 * 60 * 1000); // 15 minutes
+        }
+        throw error;
+      }
     } catch (error: unknown) {
       console.error("Error signing in with Google:", error);
       setError(
@@ -40,13 +54,36 @@ export default function AuthPage() {
 
   const handleEmailAuth = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    if (isBlocked) {
+      setError("Authentication is temporarily blocked. Please try again later.");
+      return;
+    }
+    
     setLoading(true);
     setError(null);
+    setPasswordErrors([]);
 
     const formData = new FormData(event.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const name = formData.get("name") as string;
+
+    // Client-side validation
+    if (!validateEmail(email)) {
+      setError("Please enter a valid email address");
+      setLoading(false);
+      return;
+    }
+
+    if (tab === "register") {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        setPasswordErrors(passwordValidation.errors);
+        setLoading(false);
+        return;
+      }
+    }
 
     try {
       if (tab === "signin") {
@@ -54,19 +91,40 @@ export default function AuthPage() {
           email,
           password,
         });
-        if (error) throw error;
+        
+        if (error) {
+          // Handle rate limiting
+          if (error.message.includes('rate limit') || error.message.includes('Too many')) {
+            setIsBlocked(true);
+            setTimeout(() => setIsBlocked(false), 15 * 60 * 1000); // 15 minutes
+          }
+          throw error;
+        }
+        
         await userUpsert.mutateAsync();
       } else {
+        // Sanitize name input
+        const sanitizedName = name?.trim().replace(/[<>]/g, '') || "";
+        
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              name: name || "",
+              name: sanitizedName,
             },
           },
         });
-        if (error) throw error;
+        
+        if (error) {
+          // Handle rate limiting
+          if (error.message.includes('rate limit') || error.message.includes('Too many')) {
+            setIsBlocked(true);
+            setTimeout(() => setIsBlocked(false), 15 * 60 * 1000); // 15 minutes
+          }
+          throw error;
+        }
+        
         await userUpsert.mutateAsync();
         setError("Please check your email for verification link");
       }
@@ -77,6 +135,14 @@ export default function AuthPage() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (tab === "register") {
+      const password = e.target.value;
+      const validation = validatePassword(password);
+      setPasswordErrors(validation.errors);
     }
   };
 
@@ -91,15 +157,31 @@ export default function AuthPage() {
         </div>
 
         {error && (
-          <div className="w-full mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className="w-full mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
             {error}
+          </div>
+        )}
+
+        {isBlocked && (
+          <div className="w-full mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded text-sm">
+            Authentication is temporarily blocked due to too many failed attempts. Please try again in 15 minutes.
+          </div>
+        )}
+
+        {passwordErrors.length > 0 && (
+          <div className="w-full mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+            <ul className="list-disc list-inside">
+              {passwordErrors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
           </div>
         )}
 
         {/* Google Sign In Button */}
         <button
           onClick={handleGoogleSignIn}
-          disabled={loading}
+          disabled={loading || isBlocked}
           className="w-full mb-6 bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -136,7 +218,11 @@ export default function AuthPage() {
                 ? "bg-blue-700 text-white"
                 : "bg-gray-100 text-blue-700"
             }`}
-            onClick={() => setTab("signin")}
+            onClick={() => {
+              setTab("signin");
+              setPasswordErrors([]);
+            }}
+            disabled={loading}
           >
             {t("signIn")}
           </button>
@@ -146,7 +232,11 @@ export default function AuthPage() {
                 ? "bg-blue-700 text-white"
                 : "bg-gray-100 text-blue-700"
             }`}
-            onClick={() => setTab("register")}
+            onClick={() => {
+              setTab("register");
+              setPasswordErrors([]);
+            }}
+            disabled={loading}
           >
             {t("register")}
           </button>
@@ -158,29 +248,49 @@ export default function AuthPage() {
               type="text"
               name="name"
               placeholder={t("name")}
-              className="border rounded px-3 py-2"
-              disabled={loading}
+              className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading || isBlocked}
+              maxLength={50}
+              required
             />
           )}
           <input
             type="email"
             name="email"
             placeholder={t("email")}
-            className="border rounded px-3 py-2"
+            className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            disabled={loading}
+            disabled={loading || isBlocked}
+            maxLength={254}
           />
           <input
             type="password"
             name="password"
             placeholder={t("password")}
-            className="border rounded px-3 py-2"
+            className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            disabled={loading}
+            disabled={loading || isBlocked}
+            maxLength={128}
+            minLength={tab === "register" ? 8 : 1}
+            onChange={handlePasswordChange}
           />
+          
+          {tab === "register" && (
+            <div className="text-xs text-gray-600">
+              <p className="mb-1">Password requirements:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>At least 8 characters</li>
+                <li>One uppercase letter</li>
+                <li>One lowercase letter</li>
+                <li>One number</li>
+                <li>One special character</li>
+              </ul>
+            </div>
+          )}
+          
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || isBlocked || (tab === "register" && passwordErrors.length > 0)}
             className={`py-2 rounded font-semibold transition disabled:opacity-50 ${
               tab === "signin"
                 ? "bg-orange-500 text-white hover:bg-orange-600"
