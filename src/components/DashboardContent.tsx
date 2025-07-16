@@ -17,313 +17,282 @@ interface DashboardContentProps {
 export function DashboardContent({ locale }: DashboardContentProps) {
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   
-  // Always call useTranslations, handle errors in the component
   const t = useTranslations("DashboardPage");
   
   const { data: teamsData, isLoading: isLoadingTeams, error: teamsError, refetch } = trpc.getTeams.useQuery();
   const { data: trainingSetsData, isLoading: isLoadingTrainingSets, error: trainingSetsError, refetch: refetchTrainingSets } = trpc.getAllTrainingSets.useQuery();
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold gradient-text">
-              {t("welcome")}
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Manage your basketball teams and training programs
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge variant="basketball" className="animate-pulse-subtle">
-              🏀 Coach Dashboard
-            </Badge>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-8">
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Total Teams"
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard 
+          title="Total Teams" 
           value={teamsData?.teams?.length || 0}
           icon="👥"
-          description="Active basketball teams"
-          change={teamsData?.teams?.length ? {
-            value: "+2 this month",
-            trend: "up"
-          } : undefined}
+          variant="basketball"
+          loading={isLoadingTeams}
+          trend="+2 this month"
         />
-        <StatsCard
-          title="Training Sets"
+        <StatsCard 
+          title="Training Sets" 
           value={trainingSetsData?.trainingSets?.length || 0}
           icon="📋"
-          description="Available training programs"
-          change={trainingSetsData?.trainingSets?.length ? {
-            value: "+5 this week",
-            trend: "up"
-          } : undefined}
+          variant="court"
+          loading={isLoadingTrainingSets}
+          trend="+5 this week"
         />
-        <StatsCard
-          title="Total Players"
-          value={teamsData?.teams?.reduce((sum, team) => sum + team.players.length, 0) || 0}
-          icon="🏃‍♂️"
-          description="Registered players"
+        <StatsCard 
+          title="Active Players" 
+          value={teamsData?.teams?.reduce((acc, team) => acc + (team.players?.length || 0), 0) || 0}
+          icon="🏀"
+          variant="success"
+          loading={isLoadingTeams}
+          trend="All active"
         />
-        <StatsCard
-          title="Active Sessions"
-          value={0}
-          icon="⚡"
-          description="Ongoing training sessions"
+        <StatsCard 
+          title="Court Designs" 
+          value={12}
+          icon="🎯"
+          variant="default"
+          loading={false}
+          trend="New feature"
         />
-      </div>
+      </section>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <FeatureCard
-          icon="🏀"
-          title="Create Team"
-          description="Add a new basketball team"
-          action={
-            <Button
-              variant="basketball"
-              size="sm"
-              onClick={() => setShowCreateTeam(true)}
-            >
-              Create
-            </Button>
-          }
-        />
-        <FeatureCard
-          icon="📋"
-          title="Training Sets"
-          description="Design training programs"
-          action={
-            <Button
-              variant="court"
-              size="sm"
-              asChild
-            >
-              <Link href="/training-set-builder">
-                Create
-              </Link>
-            </Button>
-          }
-        />
-        <FeatureCard
-          icon="📊"
-          title="Analytics"
-          description="View performance metrics"
-          action={
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-            >
-              Coming Soon
-            </Button>
-          }
-        />
-        <FeatureCard
-          icon="🎯"
-          title="Training Plans"
-          description="Schedule training sessions"
-          action={
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-            >
-              Coming Soon
-            </Button>
-          }
-        />
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Teams Section */}
-        <Card variant="elevated" className="animate-slide-in-left">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                👥 {t("yourTeams")}
-                {teamsData?.teams && (
-                  <CountBadge count={teamsData.teams.length} />
-                )}
-              </CardTitle>
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-gray-900">Quick Actions</h3>
+          <Badge variant="basketball" className="animate-pulse-subtle">
+            Get Started
+          </Badge>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <FeatureCard
+            icon="🏀"
+            title="Create Team"
+            description="Add a new basketball team and start managing your roster"
+            gradient="gradient-basketball"
+            action={
               <Button
                 variant="basketball"
                 size="sm"
                 onClick={() => setShowCreateTeam(true)}
+                className="w-full"
               >
-                Add Team
+                <span className="mr-2">+</span>
+                Create Team
               </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
+            }
+          />
+          <FeatureCard
+            icon="📋"
+            title="Training Sets"
+            description="Design comprehensive training programs and exercises"
+            gradient="gradient-court"
+            action={
+              <Button
+                variant="court"
+                size="sm"
+                asChild
+                className="w-full"
+              >
+                <Link href="/training-set-builder">
+                  <span className="mr-2">📝</span>
+                  Build Training
+                </Link>
+              </Button>
+            }
+          />
+          <FeatureCard
+            icon="🎯"
+            title="Court Designer"
+            description="Create plays and strategies with interactive basketball court"
+            gradient="gradient-success"
+            action={
+              <Button
+                variant="success"
+                size="sm"
+                disabled
+                className="w-full"
+              >
+                <span className="mr-2">🔧</span>
+                Coming Soon
+              </Button>
+            }
+          />
+        </div>
+      </section>
+
+      {/* Main Content Grid */}
+      <section className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Teams Section */}
+        <div className="xl:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-bold text-gray-900">{t("yourTeams")}</h3>
+            <Button
+              variant="basketball"
+              size="sm"
+              onClick={() => setShowCreateTeam(true)}
+              className="hover-lift"
+            >
+              <span className="mr-2">+</span>
+              {t("createTeam")}
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
             {isLoadingTeams ? (
-              <ListSkeleton items={3} />
+              <ListSkeleton count={3} />
             ) : teamsError ? (
-              <ErrorState
-                title="Failed to load teams"
-                message="Please try refreshing the page"
-                retry={() => refetch()}
+              <ErrorState 
+                message="Failed to load teams" 
+                onRetry={refetch}
               />
-            ) : !teamsData?.teams || teamsData.teams.length === 0 ? (
-              <EmptyState
-                icon="🏀"
-                title={t("noTeams")}
-                description="Get started by creating your first basketball team"
+            ) : teamsData?.teams?.length === 0 ? (
+              <EmptyState 
+                icon="👥"
+                title="No teams yet"
+                description={t("noTeams")}
                 action={
                   <Button
                     variant="basketball"
                     onClick={() => setShowCreateTeam(true)}
+                    className="mt-4"
                   >
+                    <span className="mr-2">+</span>
                     Create Your First Team
                   </Button>
                 }
               />
             ) : (
-              <div className="space-y-4">
-                {teamsData.teams.map((team, index) => (
-                  <div
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {teamsData?.teams?.map((team) => (
+                  <TeamCard
                     key={team.id}
-                    className="animate-slide-in-right"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <TeamCard
-                      name={team.name}
-                      playerCount={team.players.length}
-                      status="active"
-                      onView={() => window.location.href = `/team/${team.id}`}
-                      onEdit={() => {
-                        // TODO: Implement edit functionality
-                      }}
-                    />
-                  </div>
+                    team={team}
+                    playerCount={team.players?.length || 0}
+                    variant="basketball"
+                    className="hover-lift card-hover"
+                  />
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Training Sets Section */}
-        <Card variant="elevated" className="animate-slide-in-right">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                📋 {t("trainingSets")}
-                {trainingSetsData?.trainingSets && (
-                  <CountBadge count={trainingSetsData.trainingSets.length} />
-                )}
-              </CardTitle>
-              <Button
-                variant="court"
-                size="sm"
-                asChild
-              >
-                <Link href="/training-set-builder">
-                  Create Set
-                </Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900">{t("trainingSets")}</h3>
+            <Button
+              variant="court"
+              size="sm"
+              asChild
+              className="hover-lift"
+            >
+              <Link href="/training-set-builder">
+                <span className="mr-2">+</span>
+                Create Set
+              </Link>
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
             {isLoadingTrainingSets ? (
-              <ListSkeleton items={3} />
+              <ListSkeleton count={3} />
             ) : trainingSetsError ? (
-              <ErrorState
-                title="Failed to load training sets"
-                message="Please try refreshing the page"
-                retry={() => refetchTrainingSets()}
+              <ErrorState 
+                message="Failed to load training sets" 
+                onRetry={refetchTrainingSets}
               />
-            ) : !trainingSetsData?.trainingSets || trainingSetsData.trainingSets.length === 0 ? (
-              <EmptyState
+            ) : trainingSetsData?.trainingSets?.length === 0 ? (
+              <EmptyState 
                 icon="📋"
-                title={t("noTrainingSets")}
-                description="Create your first training set to get started"
+                title="No training sets"
+                description={t("noTrainingSets")}
                 action={
                   <Button
                     variant="court"
                     asChild
+                    className="mt-4"
                   >
                     <Link href="/training-set-builder">
+                      <span className="mr-2">+</span>
                       Create Training Set
                     </Link>
                   </Button>
                 }
               />
             ) : (
-              <div className="space-y-4">
-                {trainingSetsData.trainingSets.map((trainingSet, index) => (
-                  <div
-                    key={trainingSet.id}
-                    className="animate-slide-in-left"
-                    style={{ animationDelay: `${index * 0.1}s` }}
+              <div className="space-y-3">
+                {trainingSetsData?.trainingSets?.map((trainingSet) => (
+                  <Card 
+                    key={trainingSet.id} 
+                    variant="court" 
+                    className="hover-lift card-hover"
+                    interactive
                   >
-                    <Card variant="court" interactive className="hover-lift">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="text-base">{trainingSet.name}</CardTitle>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="court" size="sm">
-                                {trainingSet.teamName}
-                              </Badge>
-                              <Badge variant="outline" size="sm">
-                                {trainingSet.exercises.length} exercise{trainingSet.exercises.length !== 1 ? 's' : ''}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="text-basketball-blue-500 text-lg">
-                            →
-                          </div>
-                        </div>
-                      </CardHeader>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">{trainingSet.name}</CardTitle>
+                        <CountBadge count={trainingSet.exercises?.length || 0} />
+                      </div>
                       {trainingSet.description && (
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {trainingSet.description}
-                          </p>
-                        </CardContent>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {trainingSet.description}
+                        </p>
                       )}
-                    </Card>
-                  </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-500">
+                            {trainingSet.exercises?.length || 0} exercises
+                          </span>
+                          <span className="text-gray-300">•</span>
+                          <span className="text-sm text-gray-500">
+                            {trainingSet.team?.name || "No team"}
+                          </span>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          View
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Recent Activity Section */}
-      <Card variant="elevated" className="animate-fade-in-up">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            📊 Recent Activity
-            <Badge variant="outline" size="sm">New</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon="📈"
-            title="No recent activity"
-            description="Activity will appear here once you start using the platform"
-          />
-        </CardContent>
-      </Card>
+      {/* Recent Activity */}
+      <section>
+        <h3 className="text-2xl font-bold text-gray-900 mb-6">Recent Activity</h3>
+        <div className="glass rounded-2xl p-6 backdrop-blur-xl border border-white/20">
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">📈</span>
+            </div>
+            <h4 className="text-lg font-semibold text-gray-900 mb-2">
+              Activity Timeline Coming Soon
+            </h4>
+            <p className="text-gray-600 mb-4">
+              Track your coaching activities, training sessions, and team progress.
+            </p>
+            <Badge variant="outline">Feature in Development</Badge>
+          </div>
+        </div>
+      </section>
 
       {/* Create Team Modal */}
       <CreateTeamModal
         isOpen={showCreateTeam}
         onClose={() => setShowCreateTeam(false)}
-        onSuccess={() => {
-          refetch();
-          setShowCreateTeam(false);
-        }}
+        onSuccess={refetch}
       />
     </div>
   );
