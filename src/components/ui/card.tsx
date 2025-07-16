@@ -1,15 +1,59 @@
 import * as React from "react"
-
+import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+const cardVariants = cva(
+  "flex flex-col rounded-xl border bg-card text-card-foreground shadow-soft transition-all duration-200 ease-in-out",
+  {
+    variants: {
+      variant: {
+        default: "border-border",
+        elevated: "shadow-medium hover:shadow-strong",
+        outlined: "border-2 border-border",
+        filled: "bg-muted/30 border-muted",
+        basketball: "border-l-4 border-basketball-orange-500 bg-gradient-to-r from-basketball-orange-50/20 to-transparent dark:from-basketball-orange-900/20",
+        court: "border-l-4 border-basketball-blue-500 bg-gradient-to-r from-basketball-blue-50/20 to-transparent dark:from-basketball-blue-900/20",
+        success: "border-l-4 border-basketball-green-500 bg-gradient-to-r from-basketball-green-50/20 to-transparent dark:from-basketball-green-900/20",
+        warning: "border-l-4 border-yellow-500 bg-gradient-to-r from-yellow-50/20 to-transparent dark:from-yellow-900/20",
+        error: "border-l-4 border-destructive bg-gradient-to-r from-destructive/5 to-transparent dark:from-destructive/10",
+      },
+      size: {
+        sm: "p-4 gap-3",
+        md: "p-6 gap-4",
+        lg: "p-8 gap-6",
+      },
+      interactive: {
+        true: "cursor-pointer hover:shadow-medium hover:-translate-y-0.5 active:scale-[0.98]",
+        false: "",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "md",
+      interactive: false,
+    },
+  }
+)
+
+export interface CardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardVariants> {
+  asChild?: boolean;
+}
+
+function Card({ 
+  className, 
+  variant, 
+  size, 
+  interactive, 
+  asChild = false, 
+  ...props 
+}: CardProps) {
+  const Comp = asChild ? React.Fragment : "div"
+  
   return (
-    <div
-      data-slot="card"
-      className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
-        className
-      )}
+    <Comp
+      className={cn(cardVariants({ variant, size, interactive }), className)}
       {...props}
     />
   )
@@ -18,9 +62,8 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      data-slot="card-header"
       className={cn(
-        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
+        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
         className
       )}
       {...props}
@@ -31,8 +74,10 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
+      className={cn(
+        "leading-none font-semibold tracking-tight text-foreground",
+        className
+      )}
       {...props}
     />
   )
@@ -41,8 +86,10 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      data-slot="card-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(
+        "text-muted-foreground text-sm leading-relaxed",
+        className
+      )}
       {...props}
     />
   )
@@ -53,7 +100,7 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-action"
       className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
+        "col-start-2 row-span-2 row-start-1 self-start justify-self-end flex items-center gap-2",
         className
       )}
       {...props}
@@ -64,8 +111,7 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      data-slot="card-content"
-      className={cn("px-6", className)}
+      className={cn("flex-1", className)}
       {...props}
     />
   )
@@ -74,11 +120,243 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      data-slot="card-footer"
-      className={cn("flex items-center px-6 [.border-t]:pt-6", className)}
+      className={cn(
+        "flex items-center justify-between gap-2 pt-4 border-t border-border/50",
+        className
+      )}
       {...props}
     />
   )
+}
+
+// Specialized Card Components
+
+// Stats Card
+export interface StatsCardProps {
+  title: string;
+  value: string | number;
+  change?: {
+    value: string;
+    trend: "up" | "down" | "neutral";
+  };
+  icon?: React.ReactNode;
+  description?: string;
+  className?: string;
+}
+
+export function StatsCard({
+  title,
+  value,
+  change,
+  icon,
+  description,
+  className
+}: StatsCardProps) {
+  const trendColors = {
+    up: "text-basketball-green-600",
+    down: "text-destructive",
+    neutral: "text-muted-foreground"
+  };
+
+  const trendIcons = {
+    up: "↗️",
+    down: "↘️",
+    neutral: "➡️"
+  };
+
+  return (
+    <Card variant="elevated" className={className}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          {icon && <div className="text-muted-foreground">{icon}</div>}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <div className="text-2xl font-bold text-foreground">{value}</div>
+          {change && (
+            <div className={cn("text-sm flex items-center gap-1", trendColors[change.trend])}>
+              <span>{trendIcons[change.trend]}</span>
+              {change.value}
+            </div>
+          )}
+          {description && (
+            <CardDescription>{description}</CardDescription>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Feature Card
+export interface FeatureCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  action?: React.ReactNode;
+  className?: string;
+}
+
+export function FeatureCard({
+  icon,
+  title,
+  description,
+  action,
+  className
+}: FeatureCardProps) {
+  return (
+    <Card variant="elevated" interactive={!!action} className={className}>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="text-2xl text-basketball-orange-500">{icon}</div>
+          <CardTitle>{title}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <CardDescription>{description}</CardDescription>
+      </CardContent>
+      {action && (
+        <CardFooter>
+          <div className="ml-auto">{action}</div>
+        </CardFooter>
+      )}
+    </Card>
+  );
+}
+
+// Team Card
+export interface TeamCardProps {
+  name: string;
+  playerCount: number;
+  lastActivity?: string;
+  status?: "active" | "inactive";
+  onEdit?: () => void;
+  onView?: () => void;
+  className?: string;
+}
+
+export function TeamCard({
+  name,
+  playerCount,
+  lastActivity,
+  status = "active",
+  onEdit,
+  onView,
+  className
+}: TeamCardProps) {
+  return (
+    <Card variant="basketball" interactive className={className}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              🏀 {name}
+            </CardTitle>
+            <CardDescription>
+              {playerCount} player{playerCount !== 1 ? 's' : ''}
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              "w-2 h-2 rounded-full",
+              status === "active" ? "bg-basketball-green-500" : "bg-muted-foreground"
+            )} />
+            <span className="text-xs text-muted-foreground capitalize">{status}</span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {lastActivity && (
+          <div className="text-sm text-muted-foreground">
+            Last activity: {lastActivity}
+          </div>
+        )}
+      </CardContent>
+      <CardFooter>
+        <div className="flex items-center gap-2 ml-auto">
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Edit
+            </button>
+          )}
+          {onView && (
+            <button
+              onClick={onView}
+              className="text-xs text-basketball-orange-500 hover:text-basketball-orange-600 transition-colors"
+            >
+              View →
+            </button>
+          )}
+        </div>
+      </CardFooter>
+    </Card>
+  );
+}
+
+// Exercise Card
+export interface ExerciseCardProps {
+  name: string;
+  description: string;
+  duration?: string;
+  difficulty?: "beginner" | "intermediate" | "advanced" | "expert";
+  category?: string;
+  onSelect?: () => void;
+  className?: string;
+}
+
+export function ExerciseCard({
+  name,
+  description,
+  duration,
+  difficulty,
+  category,
+  onSelect,
+  className
+}: ExerciseCardProps) {
+  const difficultyColors = {
+    beginner: "bg-basketball-green-100 text-basketball-green-800",
+    intermediate: "bg-yellow-100 text-yellow-800",
+    advanced: "bg-basketball-orange-100 text-basketball-orange-800",
+    expert: "bg-red-100 text-red-800"
+  };
+
+  return (
+    <Card variant="court" interactive={!!onSelect} className={className} onClick={onSelect}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>{name}</CardTitle>
+          {difficulty && (
+            <span className={cn(
+              "px-2 py-1 rounded-full text-xs font-medium",
+              difficultyColors[difficulty]
+            )}>
+              {difficulty}
+            </span>
+          )}
+        </div>
+        {category && (
+          <CardDescription className="text-xs uppercase tracking-wide">
+            {category}
+          </CardDescription>
+        )}
+      </CardHeader>
+      <CardContent>
+        <CardDescription>{description}</CardDescription>
+      </CardContent>
+      {duration && (
+        <CardFooter>
+          <div className="text-sm text-muted-foreground">
+            ⏱️ {duration}
+          </div>
+        </CardFooter>
+      )}
+    </Card>
+  );
 }
 
 export {
@@ -89,4 +367,9 @@ export {
   CardAction,
   CardDescription,
   CardContent,
+  StatsCard,
+  FeatureCard,
+  TeamCard,
+  ExerciseCard,
+  cardVariants
 }
