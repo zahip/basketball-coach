@@ -5,66 +5,187 @@ import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { 
+  sanitizeInput, 
+  sanitizeObject, 
+  validateEmail, 
+  validateTeamName, 
+  validatePlayerName,
+  createSecureError,
+  validateEnvVars,
+  trackAuthAttempt,
+  clearAuthAttempts,
+  getClientIP
+} from "@/lib/security";
+
+// Validate environment variables on startup
+validateEnvVars();
 
 export const runtime = "nodejs";
 
-// 1. Define tRPC router
-const t = initTRPC.create();
-const appRouter = t.router({
-  hello: t.procedure.query(() => ({ message: "Hello from tRPC!" })),
-  echo: t.procedure
-    .input(z.object({ text: z.string() }))
-    .query(({ input }) => ({ echo: input.text })),
-  userUpsert: t.procedure.mutation(async () => {
-    console.log("userUpsert");
-    const supabase = await createClient();
-    console.log("supabase", supabase);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    console.log("user", user);
-    if (!user) {
-      throw new Error("Not authenticated");
+// Enhanced tRPC context with security info
+const createContext = async (opts: { req: Request }) => {
+  const clientIP = getClientIP(opts.req);
+  return {
+    clientIP,
+    userAgent: opts.req.headers.get('user-agent') || '',
+    requestId: crypto.randomUUID(),
+  };
+};
+
+// Enhanced tRPC with security middleware
+const t = initTRPC.context<typeof createContext>().create({
+  errorFormatter: ({ shape, error }) => {
+    // Don't expose sensitive error details in production
+    if (process.env.NODE_ENV === 'production') {
+      return {
+        ...shape,
+        message: error.code === 'INTERNAL_SERVER_ERROR' 
+          ? 'Internal server error' 
+          : shape.message,
+      };
     }
+    return shape;
+  },
+});
+
+// Security middleware
+const securityMiddleware = t.middleware(async ({ ctx, next }) => {
+  const start = Date.now();
+  
+  try {
+    const result = await next();
+    
+    // Log successful requests
+    console.log(`[${ctx.requestId}] Success: ${Date.now() - start}ms, IP: ${ctx.clientIP}`);
+    
+    return result;
+  } catch (error) {
+    // Log failed requests
+    console.error(`[${ctx.requestId}] Error: ${Date.now() - start}ms, IP: ${ctx.clientIP}`, error);
+    throw error;
+  }
+});
+
+// Authentication middleware with security features
+const authMiddleware = t.middleware(async ({ ctx, next }) => {
+  const supabase = await createClient();
+  
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (!user || error) {
+      throw createSecureError('Authentication required', 401);
+    }
+    
+    // Clear auth attempts on successful authentication
+    clearAuthAttempts(ctx.clientIP);
+    
+    return next({
+      ctx: {
+        ...ctx,
+        user,
+        supabase,
+      },
+    });
+  } catch (error) {
+    // Track failed authentication attempts
+    trackAuthAttempt(ctx.clientIP);
+    throw error;
+  }
+});
+
+// Protected procedure with security
+const protectedProcedure = t.procedure.use(securityMiddleware).use(authMiddleware);
+const publicProcedure = t.procedure.use(securityMiddleware);
+
+// Input validation schemas with enhanced security
+const teamInputSchema = z.object({
+  name: z.string()
+    .min(1, "Team name is required")
+    .max(100, "Team name too long")
+    .refine(validateTeamName, "Team name contains invalid characters"),
+  description: z.string()
+    .max(500, "Description too long")
+    .optional()
+});
+
+const playerInputSchema = z.object({
+  teamId: z.string().uuid("Invalid team ID"),
+  name: z.string()
+    .min(1, "Player name is required")
+    .max(50, "Player name too long")
+    .refine(validatePlayerName, "Player name contains invalid characters"),
+  position: z.string().max(10).optional(),
+  number: z.number().int().min(0).max(99).optional(),
+});
+
+const exerciseInputSchema = z.object({
+  name: z.string()
+    .min(1, "Exercise name is required")
+    .max(100, "Exercise name too long"),
+  description: z.string()
+    .max(1000, "Description too long")
+    .optional(),
+  duration: z.number().int().min(0).max(180).optional(),
+  category: z.string().max(50).optional(),
+  order: z.number().int().min(0).default(0),
+});
+
+const appRouter = t.router({
+  hello: publicProcedure.query(() => ({ message: "Hello from tRPC!" })),
+  
+  echo: publicProcedure
+    .input(z.object({ text: z.string().max(1000) }))
+    .query(({ input }) => ({ 
+      echo: sanitizeInput(input.text) 
+    })),
+  
+  userUpsert: protectedProcedure.mutation(async ({ ctx }) => {
+    const { user } = ctx;
+    
+    if (!user.email || !validateEmail(user.email)) {
+      throw createSecureError('Invalid email address', 400);
+    }
+    
+    const sanitizedName = user.user_metadata?.name ? sanitizeInput(user.user_metadata.name) : null;
+    const sanitizedEmail = sanitizeInput(user.email);
+    
     const dbUser = await prisma.user.upsert({
       where: { supabaseId: user.id },
       update: {
-        email: user.email ?? "",
-        name: user.user_metadata?.name || null,
+        email: sanitizedEmail,
+        name: sanitizedName,
         avatarUrl: user.user_metadata?.avatar_url || null,
+        updatedAt: new Date(),
       },
       create: {
         supabaseId: user.id,
-        email: user.email ?? "",
-        name: user.user_metadata?.name || null,
+        email: sanitizedEmail,
+        name: sanitizedName,
         avatarUrl: user.user_metadata?.avatar_url || null,
-        provider:
-          typeof user.app_metadata?.provider === "string"
-            ? user.app_metadata.provider
-            : "email",
+        provider: typeof user.app_metadata?.provider === "string" 
+          ? user.app_metadata.provider 
+          : "email",
       },
     });
+    
     return { success: true, user: dbUser };
   }),
-  createTeam: t.procedure
-    .input(z.object({ 
-      name: z.string().min(1, "Team name is required"),
-      description: z.string().optional() 
-    }))
-    .mutation(async ({ input }) => {
-        const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Not authenticated");
-      }
-        
+  
+  createTeam: protectedProcedure
+    .input(teamInputSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+      
+      const sanitizedInput = sanitizeObject(input);
+      
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
       });
+      
       if (!dbUser) {
-        throw new Error("User not found in database");
+        throw createSecureError('User not found in database', 404);
       }
 
       let coach = await prisma.coach.findUnique({
@@ -72,10 +193,13 @@ const appRouter = t.router({
       });
       
       if (!coach) {
+        const sanitizedName = sanitizeInput(user.user_metadata?.name || user.email || "Coach");
+        const sanitizedEmail = sanitizeInput(user.email || "");
+        
         coach = await prisma.coach.create({
           data: {
-            name: user.user_metadata?.name || user.email || "Coach",
-            email: user.email || "",
+            name: sanitizedName,
+            email: sanitizedEmail,
             userId: dbUser.id,
           }
         });
@@ -83,27 +207,24 @@ const appRouter = t.router({
       
       const team = await prisma.team.create({
         data: {
-          name: input.name,
-          description: input.description,
+          name: sanitizedInput.name,
+          description: sanitizedInput.description,
           coachId: coach.id,
         },
       });
+      
       return { success: true, team };
     }),
-  getTeams: t.procedure.query(async () => {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error("Not authenticated");
-    }
+  
+  getTeams: protectedProcedure.query(async ({ ctx }) => {
+    const { user } = ctx;
     
     const dbUser = await prisma.user.findUnique({
       where: { supabaseId: user.id }
     });
+    
     if (!dbUser) {
-      throw new Error("User not found in database");
+      throw createSecureError('User not found in database', 404);
     }
 
     const coach = await prisma.coach.findUnique({
@@ -111,7 +232,23 @@ const appRouter = t.router({
       include: {
         teams: {
           include: {
-            players: true,
+            players: {
+              select: {
+                id: true,
+                name: true,
+                position: true,
+                number: true,
+                createdAt: true,
+                updatedAt: true,
+              }
+            },
+            _count: {
+              select: {
+                players: true,
+                recordings: true,
+                trainingSets: true,
+              }
+            }
           }
         }
       }
@@ -119,22 +256,18 @@ const appRouter = t.router({
     
     return { teams: coach?.teams || [] };
   }),
-  getTeam: t.procedure
-    .input(z.object({ teamId: z.string() }))
-    .query(async ({ input }) => {
-        const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Not authenticated");
-      }
-        
+  
+  getTeam: protectedProcedure
+    .input(z.object({ teamId: z.string().uuid("Invalid team ID") }))
+    .query(async ({ input, ctx }) => {
+      const { user } = ctx;
+      
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
       });
+      
       if (!dbUser) {
-        throw new Error("User not found in database");
+        throw createSecureError('User not found in database', 404);
       }
 
       const team = await prisma.team.findFirst({
@@ -145,43 +278,59 @@ const appRouter = t.router({
           }
         },
         include: {
-          players: true,
-          coach: true,
+          players: {
+            select: {
+              id: true,
+              name: true,
+              position: true,
+              number: true,
+              createdAt: true,
+              updatedAt: true,
+            }
+          },
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          },
+          _count: {
+            select: {
+              players: true,
+              recordings: true,
+              trainingSets: true,
+            }
+          }
         }
       });
       
       if (!team) {
-        throw new Error("Team not found");
+        throw createSecureError('Team not found or access denied', 404);
       }
       
       return { team };
     }),
-  addPlayer: t.procedure
-    .input(z.object({
-      teamId: z.string(),
-      name: z.string().min(1, "Player name is required"),
-      position: z.string().optional(),
-      number: z.number().optional(),
-    }))
-    .mutation(async ({ input }) => {
-        const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Not authenticated");
-      }
-        
+  
+  addPlayer: protectedProcedure
+    .input(playerInputSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+      
+      const sanitizedInput = sanitizeObject(input);
+      
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
       });
+      
       if (!dbUser) {
-        throw new Error("User not found in database");
+        throw createSecureError('User not found in database', 404);
       }
 
+      // Verify team ownership
       const team = await prisma.team.findFirst({
         where: {
-          id: input.teamId,
+          id: sanitizedInput.teamId,
           coach: {
             userId: dbUser.id
           }
@@ -189,53 +338,65 @@ const appRouter = t.router({
       });
       
       if (!team) {
-        throw new Error("Team not found");
+        throw createSecureError('Team not found or access denied', 404);
+      }
+      
+      // Check for duplicate player number
+      if (sanitizedInput.number) {
+        const existingPlayer = await prisma.player.findFirst({
+          where: {
+            teamId: sanitizedInput.teamId,
+            number: sanitizedInput.number,
+          }
+        });
+        
+        if (existingPlayer) {
+          throw createSecureError('Player number already exists', 400);
+        }
       }
       
       const player = await prisma.player.create({
         data: {
-          name: input.name,
-          position: input.position,
-          number: input.number,
-          teamId: input.teamId,
+          name: sanitizedInput.name,
+          position: sanitizedInput.position,
+          number: sanitizedInput.number,
+          teamId: sanitizedInput.teamId,
         },
       });
       
       return { success: true, player };
     }),
-  testConnection: t.procedure.query(async () => {
+  testConnection: protectedProcedure.query(async () => {
     try {
-      console.log("Testing Prisma client...");
-      console.log("Prisma object keys:", Object.keys(prisma));
-      console.log("playRecording exists:", !!prisma.playRecording);
-      
       const result = await prisma.$queryRaw`SELECT 1 as test`;
-      
-      // Try to count existing records
       const count = await prisma.playRecording.count();
-      console.log("PlayRecording count:", count);
       
-      return { success: true, result, count, hasPlayRecording: !!prisma.playRecording };
+      return { 
+        success: true, 
+        result, 
+        count, 
+        hasPlayRecording: !!prisma.playRecording 
+      };
     } catch (error) {
       console.error("Database connection test failed:", error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      throw createSecureError('Database connection failed', 500);
     }
   }),
-  savePlayRecording: t.procedure
+  savePlayRecording: protectedProcedure
     .input(z.object({
-      teamId: z.string(),
-      name: z.string(),
+      teamId: z.string().uuid("Invalid team ID"),
+      name: z.string().max(100, "Recording name too long"),
       data: z.object({
         movements: z.array(z.object({
-          playerId: z.string(),
+          playerId: z.string().uuid("Invalid player ID"),
           x: z.number(),
           y: z.number(),
           timestamp: z.number(),
         })),
         actions: z.array(z.object({
-          id: z.string(),
+          id: z.string().uuid("Invalid action ID"),
           type: z.enum(["pass", "shoot", "cut", "block", "screen", "dribble"]),
-          playerId: z.string(),
+          playerId: z.string().uuid("Invalid player ID"),
           startX: z.number(),
           startY: z.number(),
           endX: z.number(),
@@ -244,35 +405,31 @@ const appRouter = t.router({
           color: z.string(),
         })),
         players: z.array(z.object({
-          id: z.string(),
+          id: z.string().uuid("Invalid player ID"),
           x: z.number(),
           y: z.number(),
           type: z.enum(["offense", "defense"]),
-          number: z.number().optional(),
-          name: z.string().optional(),
+          number: z.number().int().min(0).max(99).optional(),
+          name: z.string().max(50).optional(),
         })),
-        duration: z.number(),
+        duration: z.number().int().min(0).optional(),
       }),
     }))
-    .mutation(async ({ input }) => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Not authenticated");
-      }
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const sanitizedInput = sanitizeObject(input);
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
       });
       if (!dbUser) {
-        throw new Error("User not found in database");
+        throw createSecureError('User not found in database', 404);
       }
 
       const team = await prisma.team.findFirst({
         where: {
-          id: input.teamId,
+          id: sanitizedInput.teamId,
           coach: {
             userId: dbUser.id
           }
@@ -280,43 +437,37 @@ const appRouter = t.router({
       });
 
       if (!team) {
-        throw new Error("Team not found");
+        throw createSecureError('Team not found or access denied', 404);
       }
 
       console.log("About to create recording...");
-      console.log("Input data:", JSON.stringify(input, null, 2));
+      console.log("Input data:", JSON.stringify(sanitizedInput, null, 2));
       
       try {
         const recording = await prisma.playRecording.create({
           data: {
-            name: input.name,
-            teamId: input.teamId,
-            data: input.data,
+            name: sanitizedInput.name,
+            teamId: sanitizedInput.teamId,
+            data: sanitizedInput.data,
           },
         });
         console.log("Recording created successfully:", recording.id);
         return { success: true, recording };
       } catch (createError) {
         console.error("Failed to create recording:", createError);
-        throw new Error(`Failed to create recording: ${createError instanceof Error ? createError.message : String(createError)}`);
+        throw createSecureError(`Failed to create recording: ${createError instanceof Error ? createError.message : String(createError)}`, 500);
       }
     }),
-  getPlayRecordings: t.procedure
-    .input(z.object({ teamId: z.string() }))
-    .query(async ({ input }) => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Not authenticated");
-      }
+  getPlayRecordings: protectedProcedure
+    .input(z.object({ teamId: z.string().uuid("Invalid team ID") }))
+    .query(async ({ input, ctx }) => {
+      const { user } = ctx;
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
       });
       if (!dbUser) {
-        throw new Error("User not found in database");
+        throw createSecureError('User not found in database', 404);
       }
 
       const recordings = await prisma.playRecording.findMany({
@@ -335,38 +486,28 @@ const appRouter = t.router({
 
       return { recordings };
     }),
-  createTrainingSet: t.procedure
+  createTrainingSet: protectedProcedure
     .input(z.object({
-      teamId: z.string(),
-      name: z.string().min(1, "Training set name is required"),
-      description: z.string().optional(),
-      exercises: z.array(z.object({
-        name: z.string().min(1, "Exercise name is required"),
-        description: z.string().optional(),
-        duration: z.number().optional(),
-        category: z.string().optional(),
-        order: z.number().default(0),
-      })).default([]),
+      teamId: z.string().uuid("Invalid team ID"),
+      name: z.string().min(1, "Training set name is required").max(100, "Training set name too long"),
+      description: z.string().max(500).optional(),
+      exercises: z.array(exerciseInputSchema).default([]),
     }))
-    .mutation(async ({ input }) => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Not authenticated");
-      }
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const sanitizedInput = sanitizeObject(input);
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
       });
       if (!dbUser) {
-        throw new Error("User not found in database");
+        throw createSecureError('User not found in database', 404);
       }
 
       const team = await prisma.team.findFirst({
         where: {
-          id: input.teamId,
+          id: sanitizedInput.teamId,
           coach: {
             userId: dbUser.id
           }
@@ -374,16 +515,16 @@ const appRouter = t.router({
       });
 
       if (!team) {
-        throw new Error("Team not found");
+        throw createSecureError('Team not found or access denied', 404);
       }
 
       const trainingSet = await prisma.trainingSet.create({
         data: {
-          name: input.name,
-          description: input.description,
-          teamId: input.teamId,
+          name: sanitizedInput.name,
+          description: sanitizedInput.description,
+          teamId: sanitizedInput.teamId,
           exercises: {
-            create: input.exercises.map((exercise, index) => ({
+            create: sanitizedInput.exercises.map((exercise, index) => ({
               name: exercise.name,
               description: exercise.description,
               duration: exercise.duration,
@@ -401,22 +542,16 @@ const appRouter = t.router({
 
       return { success: true, trainingSet };
     }),
-  getTrainingSets: t.procedure
-    .input(z.object({ teamId: z.string() }))
-    .query(async ({ input }) => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Not authenticated");
-      }
+  getTrainingSets: protectedProcedure
+    .input(z.object({ teamId: z.string().uuid("Invalid team ID") }))
+    .query(async ({ input, ctx }) => {
+      const { user } = ctx;
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
       });
       if (!dbUser) {
-        throw new Error("User not found in database");
+        throw createSecureError('User not found in database', 404);
       }
 
       const trainingSets = await prisma.trainingSet.findMany({
@@ -440,20 +575,14 @@ const appRouter = t.router({
 
       return { trainingSets };
     }),
-  getAllTrainingSets: t.procedure.query(async () => {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error("Not authenticated");
-    }
+  getAllTrainingSets: protectedProcedure.query(async ({ ctx }) => {
+    const { user } = ctx;
     
     const dbUser = await prisma.user.findUnique({
       where: { supabaseId: user.id }
     });
     if (!dbUser) {
-      throw new Error("User not found in database");
+      throw createSecureError('User not found in database', 404);
     }
 
     const coach = await prisma.coach.findUnique({
@@ -482,31 +611,27 @@ const appRouter = t.router({
 
     return { trainingSets: allTrainingSets };
   }),
-  createExerciseTemplate: t.procedure
+  createExerciseTemplate: protectedProcedure
     .input(z.object({
-      name: z.string().min(1, "Exercise name is required"),
-      description: z.string().optional(),
-      duration: z.number().optional(),
-      category: z.string().optional(),
-      difficulty: z.string().optional(),
-      equipment: z.string().optional(),
-      instructions: z.string().optional(),
+      name: z.string().min(1, "Exercise name is required").max(100, "Exercise name too long"),
+      description: z.string().max(500).optional(),
+      duration: z.number().int().min(0).max(180).optional(),
+      category: z.string().max(50).optional(),
+      difficulty: z.string().max(50).optional(),
+      equipment: z.string().max(100).optional(),
+      instructions: z.string().max(2000).optional(),
       isPublic: z.boolean().default(false),
     }))
-    .mutation(async ({ input }) => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Not authenticated");
-      }
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const sanitizedInput = sanitizeObject(input);
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
       });
       if (!dbUser) {
-        throw new Error("User not found in database");
+        throw createSecureError('User not found in database', 404);
       }
 
       let coach = await prisma.coach.findUnique({
@@ -514,10 +639,13 @@ const appRouter = t.router({
       });
       
       if (!coach) {
+        const sanitizedName = sanitizeInput(user.user_metadata?.name || user.email || "Coach");
+        const sanitizedEmail = sanitizeInput(user.email || "");
+        
         coach = await prisma.coach.create({
           data: {
-            name: user.user_metadata?.name || user.email || "Coach",
-            email: user.email || "",
+            name: sanitizedName,
+            email: sanitizedEmail,
             userId: dbUser.id,
           }
         });
@@ -525,34 +653,28 @@ const appRouter = t.router({
 
       const exerciseTemplate = await prisma.exerciseTemplate.create({
         data: {
-          name: input.name,
-          description: input.description,
-          duration: input.duration,
-          category: input.category,
-          difficulty: input.difficulty,
-          equipment: input.equipment,
-          instructions: input.instructions,
-          isPublic: input.isPublic,
+          name: sanitizedInput.name,
+          description: sanitizedInput.description,
+          duration: sanitizedInput.duration,
+          category: sanitizedInput.category,
+          difficulty: sanitizedInput.difficulty,
+          equipment: sanitizedInput.equipment,
+          instructions: sanitizedInput.instructions,
+          isPublic: sanitizedInput.isPublic,
           coachId: coach.id,
         },
       });
 
       return { success: true, exerciseTemplate };
     }),
-  getExerciseTemplates: t.procedure.query(async () => {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error("Not authenticated");
-    }
+  getExerciseTemplates: protectedProcedure.query(async ({ ctx }) => {
+    const { user } = ctx;
     
     const dbUser = await prisma.user.findUnique({
       where: { supabaseId: user.id }
     });
     if (!dbUser) {
-      throw new Error("User not found in database");
+      throw createSecureError('User not found in database', 404);
     }
 
     const coach = await prisma.coach.findUnique({
@@ -586,32 +708,28 @@ const appRouter = t.router({
 
     return { exerciseTemplates };
   }),
-  updateExerciseTemplate: t.procedure
+  updateExerciseTemplate: protectedProcedure
     .input(z.object({
-      id: z.string(),
-      name: z.string().min(1, "Exercise name is required"),
-      description: z.string().optional(),
-      duration: z.number().optional(),
-      category: z.string().optional(),
-      difficulty: z.string().optional(),
-      equipment: z.string().optional(),
-      instructions: z.string().optional(),
+      id: z.string().uuid("Invalid exercise template ID"),
+      name: z.string().min(1, "Exercise name is required").max(100, "Exercise name too long"),
+      description: z.string().max(500).optional(),
+      duration: z.number().int().min(0).max(180).optional(),
+      category: z.string().max(50).optional(),
+      difficulty: z.string().max(50).optional(),
+      equipment: z.string().max(100).optional(),
+      instructions: z.string().max(2000).optional(),
       isPublic: z.boolean().default(false),
     }))
-    .mutation(async ({ input }) => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Not authenticated");
-      }
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const sanitizedInput = sanitizeObject(input);
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
       });
       if (!dbUser) {
-        throw new Error("User not found in database");
+        throw createSecureError('User not found in database', 404);
       }
 
       const coach = await prisma.coach.findUnique({
@@ -619,52 +737,48 @@ const appRouter = t.router({
       });
       
       if (!coach) {
-        throw new Error("Coach not found");
+        throw createSecureError('Coach not found', 404);
       }
 
       const exerciseTemplate = await prisma.exerciseTemplate.findFirst({
         where: {
-          id: input.id,
+          id: sanitizedInput.id,
           coachId: coach.id
         }
       });
 
       if (!exerciseTemplate) {
-        throw new Error("Exercise template not found or not owned by this coach");
+        throw createSecureError('Exercise template not found or not owned by this coach', 404);
       }
 
       const updatedExerciseTemplate = await prisma.exerciseTemplate.update({
-        where: { id: input.id },
+        where: { id: sanitizedInput.id },
         data: {
-          name: input.name,
-          description: input.description,
-          duration: input.duration,
-          category: input.category,
-          difficulty: input.difficulty,
-          equipment: input.equipment,
-          instructions: input.instructions,
-          isPublic: input.isPublic,
+          name: sanitizedInput.name,
+          description: sanitizedInput.description,
+          duration: sanitizedInput.duration,
+          category: sanitizedInput.category,
+          difficulty: sanitizedInput.difficulty,
+          equipment: sanitizedInput.equipment,
+          instructions: sanitizedInput.instructions,
+          isPublic: sanitizedInput.isPublic,
         },
       });
 
       return { success: true, exerciseTemplate: updatedExerciseTemplate };
     }),
-  deleteExerciseTemplate: t.procedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Not authenticated");
-      }
+  deleteExerciseTemplate: protectedProcedure
+    .input(z.object({ id: z.string().uuid("Invalid exercise template ID") }))
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const sanitizedInput = sanitizeObject(input);
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
       });
       if (!dbUser) {
-        throw new Error("User not found in database");
+        throw createSecureError('User not found in database', 404);
       }
 
       const coach = await prisma.coach.findUnique({
@@ -672,22 +786,22 @@ const appRouter = t.router({
       });
       
       if (!coach) {
-        throw new Error("Coach not found");
+        throw createSecureError('Coach not found', 404);
       }
 
       const exerciseTemplate = await prisma.exerciseTemplate.findFirst({
         where: {
-          id: input.id,
+          id: sanitizedInput.id,
           coachId: coach.id
         }
       });
 
       if (!exerciseTemplate) {
-        throw new Error("Exercise template not found or not owned by this coach");
+        throw createSecureError('Exercise template not found or not owned by this coach', 404);
       }
 
       await prisma.exerciseTemplate.delete({
-        where: { id: input.id }
+        where: { id: sanitizedInput.id }
       });
 
       return { success: true };
@@ -695,8 +809,18 @@ const appRouter = t.router({
 });
 export type AppRouter = typeof appRouter;
 
-// 2. Create Hono app and mount tRPC at /api/trpc
+// Create Hono app with security
 const app = new Hono().basePath("/api");
+
+// Add security middleware
+app.use('*', async (c, next) => {
+  // Add security headers
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('X-XSS-Protection', '1; mode=block');
+  
+  await next();
+});
 
 app.get("/hello", (c) => {
   return c.json({ message: "Hello from Hono!" });
@@ -707,7 +831,7 @@ app.all("/trpc/*", async (c) => {
     endpoint: "/api/trpc",
     req: c.req.raw,
     router: appRouter,
-    createContext: () => ({}),
+    createContext,
   });
 });
 
