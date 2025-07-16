@@ -144,7 +144,7 @@ export interface StatsCardProps {
   className?: string;
 }
 
-function StatsCard({
+export function StatsCard({
   title,
   value,
   change,
@@ -199,7 +199,7 @@ export interface FeatureCardProps {
   className?: string;
 }
 
-function FeatureCard({
+export function FeatureCard({
   icon,
   title,
   description,
@@ -237,7 +237,7 @@ export interface TeamCardProps {
   className?: string;
 }
 
-function TeamCard({
+export function TeamCard({
   name,
   playerCount,
   lastActivity,
@@ -309,7 +309,7 @@ export interface ExerciseCardProps {
   className?: string;
 }
 
-function ExerciseCard({
+export function ExerciseCard({
   name,
   description,
   duration,
@@ -367,7 +367,10 @@ export {
   CardAction,
   CardDescription,
   CardContent,
-  cardVariants,
+  cardVariants
+};
+
+export {
   StatsCard,
   FeatureCard,
   TeamCard,
