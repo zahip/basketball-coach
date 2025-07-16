@@ -1,47 +1,13 @@
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
-import DOMPurify from 'dompurify';
-
-// Initialize rate limiter for development/testing
-// In production, use proper Redis URL from environment
-const redis = new Redis({
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
-  token: process.env.REDIS_TOKEN || '',
-});
-
-// Rate limiters for different endpoints
-export const authRateLimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, '60 s'), // 5 requests per minute
-  analytics: true,
-});
-
-export const apiRateLimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(100, '60 s'), // 100 requests per minute
-  analytics: true,
-});
-
-export const strictRateLimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(10, '60 s'), // 10 requests per minute
-  analytics: true,
-});
+// Essential security utilities for Basketball Coach App
 
 // Input sanitization utilities
 export const sanitizeInput = (input: string): string => {
-  if (typeof window === 'undefined') {
-    // Server-side: use basic sanitization as fallback
-    return input
-      .replace(/[<>]/g, '')
-      .replace(/javascript:/gi, '')
-      .replace(/on\w+=/gi, '')
-      .replace(/script/gi, '')
-      .trim();
-  } else {
-    // Client-side: use DOMPurify
-    return DOMPurify.sanitize(input);
-  }
+  return input
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+=/gi, '')
+    .replace(/script/gi, '')
+    .trim();
 };
 
 export const sanitizeObject = (obj: unknown): unknown => {
@@ -154,7 +120,8 @@ export const generateSecureToken = (): string => {
   return crypto.randomUUID();
 };
 
-// Authentication attempt tracking
+// Simple authentication attempt tracking (in-memory for development)
+// In production, use Supabase's built-in rate limiting
 interface AuthAttempt {
   count: number;
   lastAttempt: number;

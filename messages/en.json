@@ -33,7 +33,11 @@
     "email": "Email",
     "password": "Password",
     "name": "Name",
-    "backToHome": "Back to Home"
+    "backToHome": "← Back to Home",
+    "signInWithGoogle": "Sign in with Google",
+    "registerWithGoogle": "Register with Google",
+    "loading": "Loading...",
+    "or": "or"
   },
   "LanguageSwitcher": {
     "en": "English",
