@@ -39,6 +39,7 @@ interface Recording {
   movements: Movement[];
   actions: Action[];
   players: Player[];
+  initialPlayers: Player[];
   duration: number;
   created: Date;
 }
@@ -52,16 +53,16 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
   
   // Initial player setup for half court
   const [players, setPlayers] = useState<Player[]>([
-    { id: "o1", x: 250, y: 420, type: "offense", number: 1 },
-    { id: "o2", x: 150, y: 380, type: "offense", number: 2 },
-    { id: "o3", x: 350, y: 380, type: "offense", number: 3 },
-    { id: "o4", x: 200, y: 320, type: "offense", number: 4 },
-    { id: "o5", x: 300, y: 320, type: "offense", number: 5 },
-    { id: "d1", x: 270, y: 400, type: "defense", number: 1 },
-    { id: "d2", x: 170, y: 360, type: "defense", number: 2 },
-    { id: "d3", x: 330, y: 360, type: "defense", number: 3 },
-    { id: "d4", x: 220, y: 300, type: "defense", number: 4 },
-    { id: "d5", x: 280, y: 300, type: "defense", number: 5 },
+    { id: crypto.randomUUID(), x: 250, y: 420, type: "offense", number: 1 },
+    { id: crypto.randomUUID(), x: 150, y: 380, type: "offense", number: 2 },
+    { id: crypto.randomUUID(), x: 350, y: 380, type: "offense", number: 3 },
+    { id: crypto.randomUUID(), x: 200, y: 320, type: "offense", number: 4 },
+    { id: crypto.randomUUID(), x: 300, y: 320, type: "offense", number: 5 },
+    { id: crypto.randomUUID(), x: 270, y: 400, type: "defense", number: 1 },
+    { id: crypto.randomUUID(), x: 170, y: 360, type: "defense", number: 2 },
+    { id: crypto.randomUUID(), x: 330, y: 360, type: "defense", number: 3 },
+    { id: crypto.randomUUID(), x: 220, y: 300, type: "defense", number: 4 },
+    { id: crypto.randomUUID(), x: 280, y: 300, type: "defense", number: 5 },
   ]);
 
   // State management
@@ -71,9 +72,13 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
   const [currentRecording, setCurrentRecording] = useState<Movement[]>([]);
   const [currentActions, setCurrentActions] = useState<Action[]>([]);
   const [recordingStartTime, setRecordingStartTime] = useState<number>(0);
+  const [recordingInitialPlayers, setRecordingInitialPlayers] = useState<Player[]>([]);
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [playbackInterval, setPlaybackInterval] = useState<NodeJS.Timeout | null>(null);
   
   // Action drawing states
   const [actionMode, setActionMode] = useState<"none" | "pass" | "shoot" | "cut" | "block" | "screen" | "dribble">("none");
@@ -138,17 +143,20 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
     setCurrentRecording([]);
     setCurrentActions([]);
     setRecordingStartTime(Date.now());
+    // Capture initial player positions when recording starts
+    setRecordingInitialPlayers([...players]);
   };
 
   const stopRecording = () => {
     if (currentRecording.length > 0 || currentActions.length > 0) {
       const recordingName = `Play ${recordings.length + 1}`;
       const newRecording: Recording = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name: recordingName,
         movements: currentRecording,
         actions: currentActions,
-        players: [...players], // Snapshot of current player positions
+        players: [...players], // Final positions (for reference)
+        initialPlayers: [...recordingInitialPlayers], // Initial positions when recording started
         duration: Date.now() - recordingStartTime,
         created: new Date(),
       };
@@ -166,6 +174,7 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
                 movements: currentRecording,
                 actions: currentActions,
                 players: [...players],
+                initialPlayers: [...recordingInitialPlayers],
                 duration: Date.now() - recordingStartTime,
               }
             });
@@ -182,7 +191,7 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
 
   const addPlayer = (type: "offense" | "defense") => {
     const newPlayer: Player = {
-      id: `${type[0]}${nextPlayerId}`,
+      id: crypto.randomUUID(),
       x: type === "offense" ? 250 : 270,
       y: 350,
       type,
@@ -236,15 +245,27 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
 
     // Handle player dragging
     if (draggedPlayer) {
-      // Record movement if recording
+      // Record movement if recording (only record significant position changes)
       if (isRecording) {
-        const movement: Movement = {
-          playerId: draggedPlayer,
-          x,
-          y,
-          timestamp: Date.now() - recordingStartTime,
-        };
-        setCurrentRecording(prev => [...prev, movement]);
+        setCurrentRecording(prev => {
+          const lastMovement = prev
+            .filter(m => m.playerId === draggedPlayer)
+            .pop();
+          
+          // Only record if position changed significantly (more than 5 pixels)
+          if (!lastMovement || 
+              Math.abs(lastMovement.x - x) > 5 || 
+              Math.abs(lastMovement.y - y) > 5) {
+            const movement: Movement = {
+              playerId: draggedPlayer,
+              x,
+              y,
+              timestamp: Date.now() - recordingStartTime,
+            };
+            return [...prev, movement];
+          }
+          return prev;
+        });
       }
 
       // Update player position
@@ -276,7 +297,7 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
     if (isDrawingAction && actionStart && tempAction && courtRef.current) {
       const finalAction: Action = {
         ...tempAction,
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
       };
       
       setActions(prev => [...prev, finalAction]);
@@ -294,16 +315,16 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
 
   const resetCourt = () => {
     setPlayers([
-      { id: "o1", x: 250, y: 420, type: "offense", number: 1 },
-      { id: "o2", x: 150, y: 380, type: "offense", number: 2 },
-      { id: "o3", x: 350, y: 380, type: "offense", number: 3 },
-      { id: "o4", x: 200, y: 320, type: "offense", number: 4 },
-      { id: "o5", x: 300, y: 320, type: "offense", number: 5 },
-      { id: "d1", x: 270, y: 400, type: "defense", number: 1 },
-      { id: "d2", x: 170, y: 360, type: "defense", number: 2 },
-      { id: "d3", x: 330, y: 360, type: "defense", number: 3 },
-      { id: "d4", x: 220, y: 300, type: "defense", number: 4 },
-      { id: "d5", x: 280, y: 300, type: "defense", number: 5 },
+      { id: crypto.randomUUID(), x: 250, y: 420, type: "offense", number: 1 },
+      { id: crypto.randomUUID(), x: 150, y: 380, type: "offense", number: 2 },
+      { id: crypto.randomUUID(), x: 350, y: 380, type: "offense", number: 3 },
+      { id: crypto.randomUUID(), x: 200, y: 320, type: "offense", number: 4 },
+      { id: crypto.randomUUID(), x: 300, y: 320, type: "offense", number: 5 },
+      { id: crypto.randomUUID(), x: 270, y: 400, type: "defense", number: 1 },
+      { id: crypto.randomUUID(), x: 170, y: 360, type: "defense", number: 2 },
+      { id: crypto.randomUUID(), x: 330, y: 360, type: "defense", number: 3 },
+      { id: crypto.randomUUID(), x: 220, y: 300, type: "defense", number: 4 },
+      { id: crypto.randomUUID(), x: 280, y: 300, type: "defense", number: 5 },
     ]);
     setActions([]);
     setActionMode("none");
@@ -311,45 +332,83 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
   };
 
   const playRecording = (recording: Recording) => {
+    // Stop any existing playback
+    if (playbackInterval) {
+      clearInterval(playbackInterval);
+    }
+    
     setSelectedRecording(recording);
     setPlaybackTime(0);
     setIsPlaying(true);
+    setIsPaused(false);
     
-    // Set initial player positions from recording
-    setPlayers(recording.players);
+    // Set initial player positions from when recording started
+    setPlayers([...recording.initialPlayers]);
     setActions([]);
     
-    // Animate the recording
+    startPlaybackAnimation(recording);
+  };
+
+  const startPlaybackAnimation = (recording: Recording) => {
     const interval = setInterval(() => {
       setPlaybackTime(prev => {
-        const newTime = prev + 100; // 100ms intervals
+        const timeIncrement = 50 * playbackSpeed; // Adjust speed
+        const newTime = prev + timeIncrement;
         
         if (newTime >= recording.duration) {
           setIsPlaying(false);
+          setIsPaused(false);
           clearInterval(interval);
+          setPlaybackInterval(null);
           // Show final state with all actions
           setActions(recording.actions);
           return recording.duration;
         }
         
-        // Apply movements up to current time
+        // Apply movements up to current time with interpolation
         const currentMovements = recording.movements.filter(m => m.timestamp <= newTime);
-        if (currentMovements.length > 0) {
-          setPlayers(prevPlayers => {
-            const updatedPlayers = [...recording.players]; // Start from initial positions
-            currentMovements.forEach(movement => {
-              const playerIndex = updatedPlayers.findIndex(p => p.id === movement.playerId);
-              if (playerIndex !== -1) {
-                updatedPlayers[playerIndex] = {
-                  ...updatedPlayers[playerIndex],
-                  x: movement.x,
-                  y: movement.y,
+        
+        // Update player positions with interpolation for smooth movement
+        setPlayers(prevPlayers => {
+          return prevPlayers.map(player => {
+            // Get all movements for this player up to current time
+            const playerMovements = currentMovements.filter(m => m.playerId === player.id);
+            
+            if (playerMovements.length === 0) {
+              return player; // No movements recorded for this player yet
+            }
+            
+            // Get the latest movement for this player
+            const latestMovement = playerMovements[playerMovements.length - 1];
+            
+            // If we have more than one movement, interpolate between the last two
+            if (playerMovements.length > 1) {
+              const secondLatest = playerMovements[playerMovements.length - 2];
+              const timeDiff = latestMovement.timestamp - secondLatest.timestamp;
+              const currentTimeDiff = newTime - secondLatest.timestamp;
+              
+              if (timeDiff > 0 && currentTimeDiff < timeDiff) {
+                // Interpolate between secondLatest and latest
+                const progress = currentTimeDiff / timeDiff;
+                const interpolatedX = secondLatest.x + (latestMovement.x - secondLatest.x) * progress;
+                const interpolatedY = secondLatest.y + (latestMovement.y - secondLatest.y) * progress;
+                
+                return {
+                  ...player,
+                  x: interpolatedX,
+                  y: interpolatedY,
                 };
               }
-            });
-            return updatedPlayers;
+            }
+            
+            // Use the latest recorded position
+            return {
+              ...player,
+              x: latestMovement.x,
+              y: latestMovement.y,
+            };
           });
-        }
+        });
         
         // Apply actions up to current time
         const currentActions = recording.actions.filter(a => a.timestamp <= newTime);
@@ -357,7 +416,44 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
         
         return newTime;
       });
-    }, 100);
+    }, 50);
+    
+    setPlaybackInterval(interval);
+  };
+
+  const pausePlayback = () => {
+    if (playbackInterval) {
+      clearInterval(playbackInterval);
+      setPlaybackInterval(null);
+    }
+    setIsPaused(true);
+    setIsPlaying(false);
+  };
+
+  const resumePlayback = () => {
+    if (selectedRecording && isPaused) {
+      setIsPaused(false);
+      setIsPlaying(true);
+      startPlaybackAnimation(selectedRecording);
+    }
+  };
+
+  const stopPlayback = () => {
+    if (playbackInterval) {
+      clearInterval(playbackInterval);
+      setPlaybackInterval(null);
+    }
+    setIsPlaying(false);
+    setIsPaused(false);
+    setSelectedRecording(null);
+    setPlaybackTime(0);
+    resetCourt();
+  };
+
+  const restartPlayback = () => {
+    if (selectedRecording) {
+      playRecording(selectedRecording);
+    }
   };
 
   const renderAction = (action: Action) => {
@@ -677,6 +773,7 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
                         movements: recordingData.movements || [],
                         actions: recordingData.actions || [],
                         players: recordingData.players || [],
+                        initialPlayers: recordingData.initialPlayers || recordingData.players || [],
                         duration: recordingData.duration || 0,
                         created: new Date(savedRec.createdAt),
                       };
@@ -714,18 +811,73 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
             </div>
           )}
 
-          {/* Playback Progress */}
-          {isPlaying && selectedRecording && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Playing: {selectedRecording.name}</span>
-                <span>{(playbackTime / 1000).toFixed(1)}s / {(selectedRecording.duration / 1000).toFixed(1)}s</span>
+          {/* Animation Controls and Playback Progress */}
+          {(isPlaying || isPaused) && selectedRecording && (
+            <div className="space-y-3 bg-gray-50 p-4 rounded-lg border">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-900">Playing: {selectedRecording.name}</span>
+                <span className="text-sm text-gray-600">{(playbackTime / 1000).toFixed(1)}s / {(selectedRecording.duration / 1000).toFixed(1)}s</span>
               </div>
+              
+              {/* Progress Bar */}
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
                   className="bg-green-500 h-2 rounded-full transition-all duration-100"
                   style={{ width: `${(playbackTime / selectedRecording.duration) * 100}%` }}
                 ></div>
+              </div>
+
+              {/* Animation Control Buttons */}
+              <div className="flex items-center gap-2 justify-center">
+                {isPaused ? (
+                  <Button
+                    onClick={resumePlayback}
+                    className="bg-green-500 hover:bg-green-600"
+                    size="sm"
+                  >
+                    ▶ Resume
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={pausePlayback}
+                    className="bg-yellow-500 hover:bg-yellow-600"
+                    size="sm"
+                  >
+                    ⏸ Pause
+                  </Button>
+                )}
+                
+                <Button
+                  onClick={restartPlayback}
+                  variant="outline"
+                  size="sm"
+                >
+                  ⏮ Restart
+                </Button>
+                
+                <Button
+                  onClick={stopPlayback}
+                  className="bg-red-500 hover:bg-red-600"
+                  size="sm"
+                >
+                  ⏹ Stop
+                </Button>
+
+                {/* Speed Control */}
+                <div className="flex items-center gap-2 ml-4">
+                  <span className="text-sm text-gray-600">Speed:</span>
+                  <select
+                    value={playbackSpeed}
+                    onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
+                    className="text-sm border border-gray-300 rounded px-2 py-1"
+                  >
+                    <option value={0.25}>0.25x</option>
+                    <option value={0.5}>0.5x</option>
+                    <option value={1}>1x</option>
+                    <option value={1.5}>1.5x</option>
+                    <option value={2}>2x</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
