@@ -2,203 +2,179 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ErrorState, ListSkeleton } from "@/components/ui/loading";
+import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { AddPlayerModal } from "@/components/AddPlayerModal";
-import { BasketballCourt } from "@/components/BasketballCourt";
+import { PlayerList } from "@/components/team/PlayerList";
+import { PracticeList } from "@/components/team/PracticeList";
+import { TrainingPlanList } from "@/components/team/TrainingPlanList";
+import { NotesSection } from "@/components/team/NotesSection";
 
 interface TeamDashboardProps {
   teamId: string;
 }
 
+const tabs = ["players", "practices", "trainingPlans", "notes"] as const;
+type TabType = typeof tabs[number];
+
 export function TeamDashboard({ teamId }: TeamDashboardProps) {
-  const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>("players");
   
-  const { data: teamData, isLoading, refetch } = trpc.getTeam.useQuery({ teamId });
-  
+  const { data: teamData, isLoading, error, refetch } = trpc.getTeam.useQuery({ teamId });
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-lg text-gray-600">Loading team...</div>
+      <div className="space-y-8 animate-fade-in">
+        <div className="space-y-4">
+          <div className="h-8 bg-muted rounded animate-pulse" />
+          <div className="h-4 bg-muted rounded w-1/2 animate-pulse" />
+        </div>
+        <ListSkeleton items={4} />
       </div>
     );
   }
 
-  if (!teamData?.team) {
+  if (error || !teamData?.team) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-lg text-red-600">Team not found</div>
-      </div>
+      <ErrorState
+        title="Failed to load team"
+        message="Team not found or you don't have access to it"
+        retry={() => refetch()}
+      />
     );
   }
 
   const { team } = teamData;
 
+  const tabConfig = {
+    players: {
+      label: "Players",
+      icon: "👥",
+      component: <PlayerList teamId={teamId} players={team.players} onUpdate={refetch} />
+    },
+    practices: {
+      label: "Practices",
+      icon: "🗓️",
+      component: <PracticeList teamId={teamId} onUpdate={refetch} />
+    },
+    trainingPlans: {
+      label: "Training Plans",
+      icon: "📚",
+      component: <TrainingPlanList teamId={teamId} onUpdate={refetch} />
+    },
+    notes: {
+      label: "Notes",
+      icon: "📝",
+      component: <NotesSection teamId={teamId} onUpdate={refetch} />
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Team Header */}
-      <Card className="shadow-lg border-l-4 border-orange-500">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-blue-900">
+    <div className="space-y-8 animate-fade-in">
+      {/* Header Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold gradient-text flex items-center gap-3">
               🏀 {team.name}
-            </div>
-            <Button
-              onClick={() => setShowAddPlayer(true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-            >
-              + Add Player
-            </Button>
-          </CardTitle>
-          {team.description && (
-            <p className="text-gray-600">{team.description}</p>
-          )}
-        </CardHeader>
-      </Card>
-
-      {/* Players Section */}
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-900">
-            👥 Players ({team.players.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {team.players.length === 0 ? (
-            <div className="text-gray-500 text-center py-8">
-              No players yet. Add your first player to get started!
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {team.players.map((player) => (
-                <Card key={player.id} className="border border-gray-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{player.name}</h3>
-                        {player.position && (
-                          <p className="text-sm text-gray-600">{player.position}</p>
-                        )}
-                      </div>
-                      {player.number && (
-                        <div className="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
-                          #{player.number}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Interactive Court Section */}
-      <BasketballCourt teamId={teamId} />
-
-      {/* Training Sets Section */}
-      <Card className="shadow-lg border-l-4 border-blue-500">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-900">
-            📋 Basketball Training Sets
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Basic Drills */}
-              <Card className="border border-gray-200 hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">🏃‍♂️ Basic Drills</h3>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Dribbling fundamentals</li>
-                    <li>• Shooting form practice</li>
-                    <li>• Defensive stance</li>
-                    <li>• Layup drills</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              {/* Offensive Sets */}
-              <Card className="border border-gray-200 hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">⚡ Offensive Sets</h3>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Pick and roll</li>
-                    <li>• Fast break drills</li>
-                    <li>• Motion offense</li>
-                    <li>• Screen plays</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              {/* Defensive Drills */}
-              <Card className="border border-gray-200 hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">🛡️ Defensive Drills</h3>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Man-to-man defense</li>
-                    <li>• Zone defense</li>
-                    <li>• Help defense</li>
-                    <li>• Rebounding drills</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              {/* Conditioning */}
-              <Card className="border border-gray-200 hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">💪 Conditioning</h3>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Suicides</li>
-                    <li>• Sprint drills</li>
-                    <li>• Agility ladders</li>
-                    <li>• Endurance runs</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              {/* Team Building */}
-              <Card className="border border-gray-200 hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">🤝 Team Building</h3>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Scrimmage games</li>
-                    <li>• Communication drills</li>
-                    <li>• Trust exercises</li>
-                    <li>• Strategy sessions</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              {/* Game Situations */}
-              <Card className="border border-gray-200 hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">🎯 Game Situations</h3>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Inbound plays</li>
-                    <li>• End-of-game scenarios</li>
-                    <li>• Press break</li>
-                    <li>• Free throw situations</li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              {team.description || "Team dashboard and management"}
+            </p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-center gap-3">
+            <Badge variant="basketball" className="animate-pulse-subtle">
+              {team.players.length} Player{team.players.length !== 1 ? 's' : ''}
+            </Badge>
+            <Badge variant="court">
+              Coach: {team.coach.name}
+            </Badge>
+          </div>
+        </div>
+      </div>
 
-      {/* Add Player Modal */}
-      <AddPlayerModal
-        isOpen={showAddPlayer}
-        onClose={() => setShowAddPlayer(false)}
-        teamId={teamId}
-        onSuccess={() => {
-          refetch();
-          setShowAddPlayer(false);
-        }}
-      />
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card variant="basketball" className="animate-slide-in-left">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              👥 Players
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{team.players.length}</div>
+            <p className="text-sm text-muted-foreground">Active players</p>
+          </CardContent>
+        </Card>
+        
+        <Card variant="court" className="animate-slide-in-left" style={{ animationDelay: '0.1s' }}>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              📋 Training Sets
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{team._count.trainingSets}</div>
+            <p className="text-sm text-muted-foreground">Training programs</p>
+          </CardContent>
+        </Card>
+        
+        <Card variant="success" className="animate-slide-in-left" style={{ animationDelay: '0.2s' }}>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              📹 Recordings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{team._count.recordings}</div>
+            <p className="text-sm text-muted-foreground">Play recordings</p>
+          </CardContent>
+        </Card>
+        
+        <Card variant="warning" className="animate-slide-in-left" style={{ animationDelay: '0.3s' }}>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              ⚡ Practices
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-sm text-muted-foreground">Upcoming sessions</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="border-b border-border">
+        <nav className="flex space-x-8">
+          {tabs.map((tab) => {
+            const config = tabConfig[tab];
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`
+                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${activeTab === tab
+                    ? 'border-basketball-orange-500 text-basketball-orange-600'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                  }
+                `}
+              >
+                <span className="flex items-center gap-2">
+                  <span>{config.icon}</span>
+                  {config.label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div className="animate-fade-in">
+        {tabConfig[activeTab].component}
+      </div>
     </div>
   );
 }
