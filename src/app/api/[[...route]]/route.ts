@@ -947,6 +947,299 @@ const appRouter = t.router({
 
       return { success: true };
     }),
+  
+  // Practice management
+  getPractices: protectedProcedure
+    .input(z.object({ teamId: z.string().uuid("Invalid team ID") }))
+    .query(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw createSecureError('User not found in database', 404);
+      }
+
+      const practices = await prisma.practice.findMany({
+        where: {
+          team: {
+            id: input.teamId,
+            coach: {
+              userId: dbUser.id
+            }
+          }
+        },
+        include: {
+          trainingSet: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
+        },
+        orderBy: {
+          date: 'asc'
+        }
+      });
+
+      return { practices };
+    }),
+
+  createPractice: protectedProcedure
+    .input(z.object({
+      teamId: z.string().uuid("Invalid team ID"),
+      date: z.string().datetime(),
+      time: z.string().max(10).optional(),
+      location: z.string().max(100).optional(),
+      trainingSetId: z.string().uuid().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const sanitizedInput = sanitizeObject(input) as typeof input;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw createSecureError('User not found in database', 404);
+      }
+
+      const team = await prisma.team.findFirst({
+        where: {
+          id: sanitizedInput.teamId,
+          coach: {
+            userId: dbUser.id
+          }
+        }
+      });
+
+      if (!team) {
+        throw createSecureError('Team not found or access denied', 404);
+      }
+
+      const practice = await prisma.practice.create({
+        data: {
+          date: new Date(sanitizedInput.date),
+          time: sanitizedInput.time,
+          location: sanitizedInput.location,
+          teamId: sanitizedInput.teamId,
+          trainingSetId: sanitizedInput.trainingSetId,
+        },
+      });
+
+      return { success: true, practice };
+    }),
+
+  attachTrainingSetToPractice: protectedProcedure
+    .input(z.object({
+      practiceId: z.string().uuid("Invalid practice ID"),
+      trainingSetId: z.string().uuid("Invalid training set ID"),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const sanitizedInput = sanitizeObject(input) as typeof input;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw createSecureError('User not found in database', 404);
+      }
+
+      const practice = await prisma.practice.findFirst({
+        where: {
+          id: sanitizedInput.practiceId,
+          team: {
+            coach: {
+              userId: dbUser.id
+            }
+          }
+        }
+      });
+
+      if (!practice) {
+        throw createSecureError('Practice not found or access denied', 404);
+      }
+
+      const updatedPractice = await prisma.practice.update({
+        where: { id: sanitizedInput.practiceId },
+        data: {
+          trainingSetId: sanitizedInput.trainingSetId,
+        },
+      });
+
+      return { success: true, practice: updatedPractice };
+    }),
+
+  // Coach Notes management
+  getCoachNotes: protectedProcedure
+    .input(z.object({ teamId: z.string().uuid("Invalid team ID") }))
+    .query(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw createSecureError('User not found in database', 404);
+      }
+
+      const notes = await prisma.coachNote.findMany({
+        where: {
+          team: {
+            id: input.teamId,
+            coach: {
+              userId: dbUser.id
+            }
+          }
+        },
+        orderBy: {
+          noteDate: 'desc'
+        }
+      });
+
+      return { notes };
+    }),
+
+  createCoachNote: protectedProcedure
+    .input(z.object({
+      teamId: z.string().uuid("Invalid team ID"),
+      title: z.string().max(100).optional(),
+      content: z.string().min(1, "Content is required").max(2000, "Content too long"),
+      practiceId: z.string().uuid().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const sanitizedInput = sanitizeObject(input) as typeof input;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw createSecureError('User not found in database', 404);
+      }
+
+      const team = await prisma.team.findFirst({
+        where: {
+          id: sanitizedInput.teamId,
+          coach: {
+            userId: dbUser.id
+          }
+        }
+      });
+
+      if (!team) {
+        throw createSecureError('Team not found or access denied', 404);
+      }
+
+      const note = await prisma.coachNote.create({
+        data: {
+          title: sanitizedInput.title,
+          content: sanitizedInput.content,
+          teamId: sanitizedInput.teamId,
+          practiceId: sanitizedInput.practiceId,
+        },
+      });
+
+      return { success: true, note };
+    }),
+
+  deleteCoachNote: protectedProcedure
+    .input(z.object({ noteId: z.string().uuid("Invalid note ID") }))
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const sanitizedInput = sanitizeObject(input) as typeof input;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw createSecureError('User not found in database', 404);
+      }
+
+      const note = await prisma.coachNote.findFirst({
+        where: {
+          id: sanitizedInput.noteId,
+          team: {
+            coach: {
+              userId: dbUser.id
+            }
+          }
+        }
+      });
+
+      if (!note) {
+        throw createSecureError('Note not found or access denied', 404);
+      }
+
+      await prisma.coachNote.delete({
+        where: { id: sanitizedInput.noteId }
+      });
+
+      return { success: true };
+    }),
+
+  // Training Set management
+  duplicateTrainingSet: protectedProcedure
+    .input(z.object({ trainingSetId: z.string().uuid("Invalid training set ID") }))
+    .mutation(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const sanitizedInput = sanitizeObject(input) as typeof input;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw createSecureError('User not found in database', 404);
+      }
+
+      const originalTrainingSet = await prisma.trainingSet.findFirst({
+        where: {
+          id: sanitizedInput.trainingSetId,
+          team: {
+            coach: {
+              userId: dbUser.id
+            }
+          }
+        },
+        include: {
+          exercises: true
+        }
+      });
+
+      if (!originalTrainingSet) {
+        throw createSecureError('Training set not found or access denied', 404);
+      }
+
+      const duplicatedTrainingSet = await prisma.trainingSet.create({
+        data: {
+          name: `${originalTrainingSet.name} (Copy)`,
+          description: originalTrainingSet.description,
+          teamId: originalTrainingSet.teamId,
+          exercises: {
+            create: originalTrainingSet.exercises.map(exercise => ({
+              name: exercise.name,
+              description: exercise.description,
+              duration: exercise.duration,
+              category: exercise.category,
+              order: exercise.order,
+              exerciseId: exercise.exerciseId,
+            }))
+          }
+        },
+        include: {
+          exercises: true
+        }
+      });
+
+      return { success: true, trainingSet: duplicatedTrainingSet };
+    }),
 });
 export type AppRouter = typeof appRouter;
 

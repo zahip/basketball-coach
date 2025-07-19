@@ -96,7 +96,7 @@ export const validateTeamName = (name: string): boolean => {
 };
 
 export const validatePlayerName = (name: string): boolean => {
-  return name.length >= 1 && name.length <= 50 && /^[a-zA-Z\s\-']+$/.test(name);
+  return name.length >= 1 && name.length <= 50 && /^[a-zA-Z0-9\u0590-\u05FF\s\-'\.]+$/.test(name);
 };
 
 // IP address utilities

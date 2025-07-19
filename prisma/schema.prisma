@@ -87,6 +87,8 @@ model Team {
   players      Player[]
   recordings   PlayRecording[]
   trainingSets TrainingSet[]
+  practices    Practice[]
+  coachNotes   CoachNote[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 }
@@ -115,14 +117,15 @@ model PlayRecording {
 }
 
 model TrainingSet {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   name        String
   description String?
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team        Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId      String
   exercises   TrainingSetExercise[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  practices   Practice[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model TrainingSetExercise {
@@ -154,6 +157,32 @@ model ExerciseTemplate {
   isPublic    Boolean   @default(false) // For future payment features
   usageCount  Int       @default(0)     // Track how often it's used
   trainingSetExercises TrainingSetExercise[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Practice {
+  id            String      @id @default(uuid())
+  date          DateTime
+  time          String?     // Time as string (e.g., "18:00")
+  location      String?
+  team          Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId        String
+  trainingSet   TrainingSet? @relation(fields: [trainingSetId], references: [id])
+  trainingSetId String?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model CoachNote {
+  id          String    @id @default(uuid())
+  title       String?
+  content     String
+  team        Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId      String
+  practiceId  String?   // Optional reference to practice
+  noteDate    DateTime  @default(now())
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }

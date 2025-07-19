@@ -91,12 +91,19 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
     e.preventDefault();
     if (!formData.name.trim()) return;
 
+    const validCategories = ["warmup", "ball_handling", "shooting", "defense", "conditioning", "scrimmage", "skills", "numerical_advantage"];
+    const validDifficulties = ["beginner", "intermediate", "advanced"];
+    
     const data = {
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
       duration: formData.duration ? parseInt(formData.duration) : undefined,
-      category: formData.category || undefined,
-      difficulty: formData.difficulty || undefined,
+      category: (formData.category && validCategories.includes(formData.category)) 
+        ? formData.category as "warmup" | "ball_handling" | "shooting" | "defense" | "conditioning" | "scrimmage" | "skills" | "numerical_advantage"
+        : undefined,
+      difficulty: (formData.difficulty && validDifficulties.includes(formData.difficulty))
+        ? formData.difficulty as "beginner" | "intermediate" | "advanced"
+        : undefined,
       equipment: formData.equipment.trim() || undefined,
       instructions: formData.instructions.trim() || undefined,
       isPublic: formData.isPublic,
@@ -130,7 +137,16 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
     }
   };
 
-  const categories = ["Warm-up", "Skills", "Conditioning", "Scrimmage", "Cool-down"];
+  const categories = [
+    { value: "warmup", label: "Warm-up" },
+    { value: "ball_handling", label: "Ball Handling" },
+    { value: "shooting", label: "Shooting" },
+    { value: "defense", label: "Defense" },
+    { value: "conditioning", label: "Conditioning" },
+    { value: "scrimmage", label: "Scrimmage" },
+    { value: "skills", label: "Skills" },
+    { value: "numerical_advantage", label: "Numerical Advantage" },
+  ];
   const difficulties = ["beginner", "intermediate", "advanced"];
 
   const filteredExercises = exerciseTemplates.filter((exercise) => {
@@ -153,13 +169,21 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
 
   const getCategoryColor = (category?: string) => {
     switch (category) {
-      case "Warm-up": return "bg-orange-100 text-orange-800";
-      case "Skills": return "bg-blue-100 text-blue-800";
-      case "Conditioning": return "bg-purple-100 text-purple-800";
-      case "Scrimmage": return "bg-green-100 text-green-800";
-      case "Cool-down": return "bg-gray-100 text-gray-800";
+      case "warmup": return "bg-orange-100 text-orange-800";
+      case "ball_handling": return "bg-purple-100 text-purple-800";
+      case "shooting": return "bg-red-100 text-red-800";
+      case "defense": return "bg-blue-100 text-blue-800";
+      case "conditioning": return "bg-green-100 text-green-800";
+      case "scrimmage": return "bg-yellow-100 text-yellow-800";
+      case "skills": return "bg-indigo-100 text-indigo-800";
+      case "numerical_advantage": return "bg-pink-100 text-pink-800";
       default: return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const getCategoryLabel = (category?: string) => {
+    const categoryItem = categories.find(cat => cat.value === category);
+    return categoryItem ? categoryItem.label : category;
   };
 
   return (
@@ -193,7 +217,7 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
             >
               <option value="">All Categories</option>
               {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
+                <option key={category.value} value={category.value}>{category.label}</option>
               ))}
             </select>
             <select
@@ -238,7 +262,7 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
               >
                 <option value="">Select category</option>
                 {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
+                  <option key={category.value} value={category.value}>{category.label}</option>
                 ))}
               </select>
               <select
@@ -342,7 +366,7 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
                               <span className="font-medium text-sm text-gray-900">{exercise.name}</span>
                               {exercise.category && (
                                 <span className={`text-xs px-2 py-1 rounded ${getCategoryColor(exercise.category)}`}>
-                                  {exercise.category}
+                                  {getCategoryLabel(exercise.category)}
                                 </span>
                               )}
                               {exercise.difficulty && (
