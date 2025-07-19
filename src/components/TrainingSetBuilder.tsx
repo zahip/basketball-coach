@@ -9,9 +9,6 @@ import { ExerciseDatabase } from "@/components/ExerciseDatabase";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useRouter } from "next/navigation";
 
-interface TrainingSetBuilderProps {
-  locale: string;
-}
 
 interface ExerciseInSet {
   id: string;
@@ -26,6 +23,11 @@ interface ExerciseInSet {
   exerciseTemplateId?: string;
 }
 
+interface TrainingSetBuilderProps {
+  locale: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function TrainingSetBuilder({ locale }: TrainingSetBuilderProps) {
   const [trainingSetName, setTrainingSetName] = useState("");
   const [trainingSetDescription, setTrainingSetDescription] = useState("");
@@ -46,7 +48,7 @@ export function TrainingSetBuilder({ locale }: TrainingSetBuilderProps) {
   }, [teamsData, teamsError, exerciseTemplatesData, exercisesError]);
 
   const createTrainingSetMutation = trpc.createTrainingSet.useMutation({
-    onSuccess: (data) => {
+    onSuccess: () => {
       router.push("/dashboard");
     },
     onError: (error) => {
@@ -54,7 +56,11 @@ export function TrainingSetBuilder({ locale }: TrainingSetBuilderProps) {
     },
   });
 
-  const handleDragEnd = (result: any) => {
+  const handleDragEnd = (result: {
+    destination?: { index: number; droppableId: string };
+    source: { index: number; droppableId: string };
+    draggableId: string;
+  }) => {
     if (!result.destination) return;
 
     const { source, destination } = result;

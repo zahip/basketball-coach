@@ -92,7 +92,7 @@ export const validateEmail = (email: string): boolean => {
 };
 
 export const validateTeamName = (name: string): boolean => {
-  return name.length >= 1 && name.length <= 100 && /^[a-zA-Z0-9\s\-_]+$/.test(name);
+  return name.length >= 1 && name.length <= 100 && /^[a-zA-Z0-9\u0590-\u05FF\s\-_]+$/.test(name);
 };
 
 export const validatePlayerName = (name: string): boolean => {

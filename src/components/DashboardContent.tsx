@@ -10,11 +10,8 @@ import { CreateTeamModal } from "@/components/CreateTeamModal";
 import { trpc } from "@/lib/trpc";
 import { useTranslations } from "next-intl";
 
-interface DashboardContentProps {
-  locale: string;
-}
 
-export function DashboardContent({ locale }: DashboardContentProps) {
+export function DashboardContent() {
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   
   // Always call useTranslations, handle errors in the component
@@ -108,6 +105,22 @@ export function DashboardContent({ locale }: DashboardContentProps) {
             >
               <Link href="/training-set-builder">
                 Create
+              </Link>
+            </Button>
+          }
+        />
+        <FeatureCard
+          icon="📚"
+          title="Exercise Library"
+          description="Browse and create exercises"
+          action={
+            <Button
+              variant="success"
+              size="sm"
+              asChild
+            >
+              <Link href="/exercises">
+                Browse
               </Link>
             </Button>
           }

@@ -141,13 +141,14 @@ model TrainingSetExercise {
 
 model ExerciseTemplate {
   id          String    @id @default(uuid())
-  name        String
-  description String?
+  name        String    // Exercise name
+  description String?   // Exercise description
   duration    Int?      // Default duration in minutes
-  category    String?   // "warmup", "skills", "scrimmage", "conditioning", etc.
+  category    String?   // "warmup", "ball_handling", "shooting", "defense", "conditioning", etc.
   difficulty  String?   // "beginner", "intermediate", "advanced"
   equipment   String?   // Equipment needed
   instructions String?  // Detailed instructions
+  diagramData Json?     // Basketball court diagram data (positions, movements, actions)
   coach       Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
   coachId     String
   isPublic    Boolean   @default(false) // For future payment features

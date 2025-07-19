@@ -14,6 +14,7 @@
 - Prisma ORM
 - Supabase (authentication)
 - tRPC
+- next-intl
 
 ## Key Commands
 

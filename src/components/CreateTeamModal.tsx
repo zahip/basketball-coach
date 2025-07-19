@@ -18,7 +18,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
   const router = useRouter();
   
   const createTeamMutation = trpc.createTeam.useMutation({
-    onSuccess: (data) => {
+    onSuccess: () => {
       setName("");
       setDescription("");
       onClose();
@@ -27,6 +27,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
     },
     onError: (error) => {
       console.error("Failed to create team:", error);
+      alert(`Failed to create team: ${error.message}`);
     },
   });
 

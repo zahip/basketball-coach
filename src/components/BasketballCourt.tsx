@@ -46,9 +46,15 @@ interface Recording {
 
 interface BasketballCourtProps {
   teamId?: string;
+  onDataChange?: (data: {
+    players: Player[];
+    actions: Action[];
+    recordings: Recording[];
+  }) => void;
+  showSaveButton?: boolean;
 }
 
-export function BasketballCourt({ teamId }: BasketballCourtProps) {
+export function BasketballCourt({ teamId, onDataChange, showSaveButton = true }: BasketballCourtProps) {
   const courtRef = useRef<SVGSVGElement>(null);
   
   // Initial player setup for half court
@@ -92,39 +98,33 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
 
   // tRPC mutations and queries
-  const saveRecordingMutation = trpc.savePlayRecording.useMutation({
-    onSuccess: () => {
-      console.log("Recording saved successfully");
-      if (teamId) {
-        refetchRecordings();
-      }
-    },
-    onError: (error) => {
-      console.error("Failed to save recording:", error);
-    },
-  });
+  const saveRecordingMutation = trpc.savePlayRecording.useMutation();
 
   // Test database connection
-  const { data: testResult } = trpc.testConnection.useQuery(undefined, {
+  const { data: testData, error: testError } = trpc.testConnection.useQuery(undefined, {
     retry: false,
-    onSuccess: (data) => {
-      console.log("Database test result:", data);
-    },
-    onError: (error) => {
-      console.error("Database test failed:", error);
-    }
   });
+  
+  // Log test results
+  if (testData) {
+    console.log("Database test result:", testData);
+  }
+  if (testError) {
+    console.error("Database test failed:", testError);
+  }
 
-  const { data: savedRecordings, refetch: refetchRecordings } = trpc.getPlayRecordings.useQuery(
+  const { data: savedRecordings, refetch: refetchRecordings, error: recordingsError } = trpc.getPlayRecordings.useQuery(
     { teamId: teamId || "" },
     { 
       enabled: !!teamId,
       retry: false,
-      onError: (error) => {
-        console.error("Failed to load saved recordings:", error);
-      }
     }
   );
+
+  // Log recordings error
+  if (recordingsError) {
+    console.error("Failed to load saved recordings:", recordingsError);
+  }
 
   const getActionColor = (actionType: string) => {
     switch (actionType) {
@@ -163,21 +163,33 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
       
       setRecordings([...recordings, newRecording]);
       
+      // Notify parent component about data changes
+      if (onDataChange) {
+        onDataChange({
+          players: [...players],
+          actions: [...actions],
+          recordings: [...recordings, newRecording],
+        });
+      }
+      
       // Save to database if teamId is provided (optional, won't block local recording)
       if (teamId && saveRecordingMutation) {
-        setTimeout(() => {
+        setTimeout(async () => {
           try {
-            saveRecordingMutation.mutate({
+            await saveRecordingMutation.mutateAsync({
               teamId,
               name: recordingName,
               data: {
                 movements: currentRecording,
                 actions: currentActions,
                 players: [...players],
-                initialPlayers: [...recordingInitialPlayers],
                 duration: Date.now() - recordingStartTime,
               }
             });
+            console.log("Recording saved successfully");
+            if (teamId) {
+              refetchRecordings();
+            }
           } catch (error) {
             console.error("Failed to save recording to database:", error);
           }
@@ -293,7 +305,7 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
     }
   }, [draggedPlayer, isRecording, recordingStartTime, isDrawingAction, actionStart, actionMode]);
 
-  const handleMouseUp = (e: React.MouseEvent<SVGSVGElement>) => {
+  const handleMouseUp = () => {
     if (isDrawingAction && actionStart && tempAction && courtRef.current) {
       const finalAction: Action = {
         ...tempAction,
@@ -553,7 +565,7 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
           {["pass", "shoot", "cut", "block", "screen", "dribble"].map((action) => (
             <Button
               key={action}
-              onClick={() => setActionMode(actionMode === action ? "none" : action as any)}
+              onClick={() => setActionMode(actionMode === action ? "none" : action as typeof actionMode)}
               variant={actionMode === action ? "default" : "outline"}
               className={actionMode === action ? `bg-${getActionColor(action).replace('#', '')} hover:bg-${getActionColor(action).replace('#', '')}/80` : ""}
               size="sm"
@@ -724,7 +736,7 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
           </div>
 
           {/* Recordings */}
-          {(recordings.length > 0 || (savedRecordings?.recordings.length || 0) > 0) && (
+          {showSaveButton && (recordings.length > 0 || (savedRecordings?.recordings.length || 0) > 0) && (
             <div className="space-y-3">
               <h3 className="font-semibold text-gray-900">Basketball Plays</h3>
               
@@ -765,8 +777,15 @@ export function BasketballCourt({ teamId }: BasketballCourtProps) {
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-700">Saved Plays</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {savedRecordings.recordings.map((savedRec) => {
-                      const recordingData = savedRec.data as any;
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {savedRecordings.recordings.map((savedRec: any) => {
+                      const recordingData = savedRec.data as {
+                        movements: Movement[];
+                        actions: Action[];
+                        players: Player[];
+                        initialPlayers?: Player[];
+                        duration: number;
+                      };
                       const recording: Recording = {
                         id: savedRec.id,
                         name: savedRec.name,

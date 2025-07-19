@@ -246,7 +246,7 @@ export function ProgressBar({
   );
 }
 
-export default {
+const loadingComponents = {
   LoadingSpinner,
   Skeleton,
   CardSkeleton,
@@ -258,3 +258,5 @@ export default {
   ErrorState,
   ProgressBar
 };
+
+export default loadingComponents;

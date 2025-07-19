@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TeamDashboard } from "@/components/TeamDashboard";
 
@@ -23,10 +20,6 @@ export default async function TeamPage({
     redirect(`/${locale}/auth`);
   }
 
-  const t = await getTranslations({
-    locale: locale,
-    namespace: "TeamPage",
-  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-100 flex flex-col">

@@ -27,6 +27,7 @@ export const runtime = "nodejs";
 const createContext = async (opts: { req: Request }) => {
   const clientIP = getClientIP(opts.req);
   return {
+    req: opts.req,
     clientIP,
     userAgent: opts.req.headers.get('user-agent') || '',
     requestId: crypto.randomUUID(),
@@ -69,10 +70,27 @@ const securityMiddleware = t.middleware(async ({ ctx, next }) => {
 
 // Authentication middleware with security features
 const authMiddleware = t.middleware(async ({ ctx, next }) => {
-  const supabase = await createClient();
-  
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const supabase = await createClient();
+    
+    // Get authorization header
+    const authHeader = ctx.req.headers.get('authorization');
+    
+    let user;
+    let error;
+    
+    if (authHeader?.startsWith('Bearer ')) {
+      // Use the provided token
+      const token = authHeader.slice(7);
+      const result = await supabase.auth.getUser(token);
+      user = result.data.user;
+      error = result.error;
+    } else {
+      // Fall back to session-based auth
+      const result = await supabase.auth.getUser();
+      user = result.data.user;
+      error = result.error;
+    }
     
     if (!user || error) {
       throw createSecureError('Authentication required', 401);
@@ -178,7 +196,7 @@ const appRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
       
-      const sanitizedInput = sanitizeObject(input);
+      const sanitizedInput = sanitizeObject(input) as typeof input;
       
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
@@ -317,7 +335,7 @@ const appRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
       
-      const sanitizedInput = sanitizeObject(input);
+      const sanitizedInput = sanitizeObject(input) as typeof input;
       
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
@@ -418,7 +436,7 @@ const appRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
 
-      const sanitizedInput = sanitizeObject(input);
+      const sanitizedInput = sanitizeObject(input) as typeof input;
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
@@ -496,7 +514,7 @@ const appRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
 
-      const sanitizedInput = sanitizeObject(input);
+      const sanitizedInput = sanitizeObject(input) as typeof input;
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
@@ -616,16 +634,17 @@ const appRouter = t.router({
       name: z.string().min(1, "Exercise name is required").max(100, "Exercise name too long"),
       description: z.string().max(500).optional(),
       duration: z.number().int().min(0).max(180).optional(),
-      category: z.string().max(50).optional(),
-      difficulty: z.string().max(50).optional(),
+      category: z.enum(["warmup", "ball_handling", "shooting", "defense", "conditioning", "scrimmage", "skills", "numerical_advantage"]).optional(),
+      difficulty: z.enum(["beginner", "intermediate", "advanced"]).optional(),
       equipment: z.string().max(100).optional(),
       instructions: z.string().max(2000).optional(),
+      diagramData: z.any().optional(), // Basketball court diagram data
       isPublic: z.boolean().default(false),
     }))
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
 
-      const sanitizedInput = sanitizeObject(input);
+      const sanitizedInput = sanitizeObject(input) as typeof input;
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
@@ -660,12 +679,57 @@ const appRouter = t.router({
           difficulty: sanitizedInput.difficulty,
           equipment: sanitizedInput.equipment,
           instructions: sanitizedInput.instructions,
+          diagramData: sanitizedInput.diagramData,
           isPublic: sanitizedInput.isPublic,
           coachId: coach.id,
         },
       });
 
       return { success: true, exerciseTemplate };
+    }),
+  getExerciseTemplate: protectedProcedure
+    .input(z.object({ id: z.string().uuid("Invalid exercise template ID") }))
+    .query(async ({ input, ctx }) => {
+      const { user } = ctx;
+      
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw createSecureError('User not found in database', 404);
+      }
+
+      const coach = await prisma.coach.findUnique({
+        where: { userId: dbUser.id }
+      });
+      
+      if (!coach) {
+        throw createSecureError('Coach not found', 404);
+      }
+
+      const exerciseTemplate = await prisma.exerciseTemplate.findFirst({
+        where: {
+          id: input.id,
+          OR: [
+            { coachId: coach.id },
+            { isPublic: true }
+          ]
+        },
+        include: {
+          coach: {
+            select: {
+              name: true,
+              email: true,
+            }
+          }
+        }
+      });
+
+      if (!exerciseTemplate) {
+        throw createSecureError('Exercise template not found or access denied', 404);
+      }
+
+      return { exerciseTemplate };
     }),
   getExerciseTemplates: protectedProcedure.query(async ({ ctx }) => {
     const { user } = ctx;
@@ -708,22 +772,99 @@ const appRouter = t.router({
 
     return { exerciseTemplates };
   }),
+  getExerciseTemplatesWithFilters: protectedProcedure
+    .input(z.object({
+      category: z.enum(["warmup", "ball_handling", "shooting", "defense", "conditioning", "scrimmage", "skills", "numerical_advantage"]).optional(),
+      difficulty: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+      search: z.string().max(100).optional(),
+      includePublic: z.boolean().default(true),
+    }))
+    .query(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        return { exerciseTemplates: [] };
+      }
+
+      const coach = await prisma.coach.findUnique({
+        where: { userId: dbUser.id }
+      });
+      
+      if (!coach) {
+        return { exerciseTemplates: [] };
+      }
+
+      const whereConditions: {
+        OR: Array<{ coachId: string } | { isPublic: boolean }>;
+        category?: string;
+        difficulty?: string;
+      } = {
+        OR: [
+          { coachId: coach.id }, // User's own exercises
+          ...(input.includePublic ? [{ isPublic: true }] : []), // Public exercises if requested
+        ]
+      };
+
+      if (input.category) {
+        whereConditions.category = input.category;
+      }
+
+      if (input.difficulty) {
+        whereConditions.difficulty = input.difficulty;
+      }
+
+      const exerciseTemplates = await prisma.exerciseTemplate.findMany({
+        where: whereConditions,
+        include: {
+          coach: {
+            select: {
+              name: true,
+            }
+          }
+        },
+        orderBy: [
+          { usageCount: 'desc' },
+          { createdAt: 'desc' }
+        ]
+      });
+
+      // Filter by search term if provided (searching in both Hebrew and English)
+      let filteredTemplates = exerciseTemplates;
+      if (input.search) {
+        const searchTerm = input.search.toLowerCase();
+        filteredTemplates = exerciseTemplates.filter(template => {
+          return (
+            template.name?.toLowerCase().includes(searchTerm) ||
+            template.description?.toLowerCase().includes(searchTerm) ||
+            template.category?.toLowerCase().includes(searchTerm) ||
+            template.difficulty?.toLowerCase().includes(searchTerm) ||
+            template.instructions?.toLowerCase().includes(searchTerm)
+          );
+        });
+      }
+
+      return { exerciseTemplates: filteredTemplates };
+    }),
   updateExerciseTemplate: protectedProcedure
     .input(z.object({
       id: z.string().uuid("Invalid exercise template ID"),
       name: z.string().min(1, "Exercise name is required").max(100, "Exercise name too long"),
       description: z.string().max(500).optional(),
       duration: z.number().int().min(0).max(180).optional(),
-      category: z.string().max(50).optional(),
-      difficulty: z.string().max(50).optional(),
+      category: z.enum(["warmup", "ball_handling", "shooting", "defense", "conditioning", "scrimmage", "skills", "numerical_advantage"]).optional(),
+      difficulty: z.enum(["beginner", "intermediate", "advanced"]).optional(),
       equipment: z.string().max(100).optional(),
       instructions: z.string().max(2000).optional(),
+      diagramData: z.any().optional(), // Basketball court diagram data
       isPublic: z.boolean().default(false),
     }))
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
 
-      const sanitizedInput = sanitizeObject(input);
+      const sanitizedInput = sanitizeObject(input) as typeof input;
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }
@@ -772,7 +913,7 @@ const appRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
 
-      const sanitizedInput = sanitizeObject(input);
+      const sanitizedInput = sanitizeObject(input) as typeof input;
 
       const dbUser = await prisma.user.findUnique({
         where: { supabaseId: user.id }

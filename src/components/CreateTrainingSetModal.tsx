@@ -38,7 +38,7 @@ export function CreateTrainingSetModal({ isOpen, onClose, onSuccess }: CreateTra
   const [selectedTeamId, setSelectedTeamId] = useState("");
   
   const createTrainingSetMutation = trpc.createTrainingSet.useMutation({
-    onSuccess: (data) => {
+    onSuccess: () => {
       setName("");
       setDescription("");
       setExercises([]);

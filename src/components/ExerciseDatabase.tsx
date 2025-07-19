@@ -317,7 +317,7 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
           </p>
           
           <Droppable droppableId="exercise-database">
-            {(provided, snapshot) => (
+            {(provided) => (
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
