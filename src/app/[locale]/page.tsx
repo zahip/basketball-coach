@@ -1,10 +1,10 @@
-import { redirect } from "next/navigation";
+// import { redirect } from "next/navigation"; // Temporarily disabled for debugging
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { PricingSection } from "@/components/PricingSection";
-import { AuthDebug } from "@/components/AuthDebug";
+// import { AuthDebug } from "@/components/AuthDebug"; // Temporarily disabled for debugging
 
 export default async function LandingPage() {
   const t = await getTranslations("HomePage");
@@ -34,7 +34,7 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <AuthDebug />
+      {/* <AuthDebug /> */}
       <Header isAuthenticated={!!user} />
       
       <main>
