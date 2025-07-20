@@ -28,11 +28,16 @@ const buttonVariants = cva(
           "bg-basketball-green-500 text-white shadow-soft hover:bg-basketball-green-600 hover:shadow-medium hover:-translate-y-0.5 focus-visible:ring-basketball-green-500/20",
         gradient:
           "bg-gradient-to-r from-basketball-orange-500 to-basketball-blue-500 text-white shadow-soft hover:from-basketball-orange-600 hover:to-basketball-blue-600 hover:shadow-medium hover:-translate-y-0.5",
+        primary:
+          "bg-blue-700 text-white shadow-soft hover:bg-blue-800 hover:shadow-medium hover:-translate-y-0.5",
+        primaryOutline:
+          "border-2 border-blue-700 text-blue-700 bg-white shadow-soft hover:bg-blue-50 hover:shadow-medium hover:-translate-y-0.5",
       },
       size: {
         default: "h-10 px-4 py-2 has-[>svg]:px-3",
         sm: "h-8 rounded-md gap-1.5 px-3 text-xs has-[>svg]:px-2.5",
         lg: "h-12 rounded-lg px-6 text-base has-[>svg]:px-4",
+        xl: "h-14 rounded-lg px-8 text-lg has-[>svg]:px-6",
         icon: "size-10",
         "icon-sm": "size-8",
         "icon-lg": "size-12",

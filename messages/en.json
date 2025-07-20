@@ -1,9 +1,64 @@
 {
   "HomePage": {
     "title": "Basketball Coach App",
+    "heroTitle": "The Ultimate Tool for Youth Basketball Coaches",
+    "heroDescription": "Plan, organize, and manage basketball practices with ease. Create training plans, assign drills, track player progress, and sync with your calendar – all in one place.",
+    "getStarted": "Get Started",
+    "logIn": "Log in",
     "about": "Manage, create, and view training plans for your basketball teams. Designed for coaches, optimized for mobile and desktop.",
     "signInRegister": "Sign In / Register",
-    "footer": "Basketball Coach App"
+    "footer": "Basketball Coach App",
+    "pricing": {
+      "title": "Choose Your Coaching Plan",
+      "subtitle": "Start free and upgrade as your team grows",
+      "freemium": {
+        "title": "Freemium",
+        "price": "Free",
+        "period": "forever",
+        "description": "Perfect for individual coaches getting started",
+        "features": [
+          "1 team management",
+          "Basic drill library",
+          "Training session planning",
+          "Player roster management",
+          "Mobile app access"
+        ],
+        "cta": "Start Free"
+      },
+      "coachPro": {
+        "title": "Coach Pro",
+        "price": "$19",
+        "period": "per month",
+        "description": "Advanced features for serious coaches",
+        "features": [
+          "Unlimited teams",
+          "Advanced drill library",
+          "Calendar sync",
+          "Progress tracking & analytics",
+          "Custom training templates",
+          "Export training plans",
+          "Priority support"
+        ],
+        "cta": "Choose Pro",
+        "popular": "Most Popular"
+      },
+      "clubPlan": {
+        "title": "Club Plan",
+        "price": "$49",
+        "period": "per month",
+        "description": "For organizations managing multiple teams",
+        "features": [
+          "Everything in Coach Pro",
+          "Multi-coach collaboration",
+          "Organization dashboard",
+          "Team performance analytics",
+          "Advanced reporting",
+          "API access",
+          "Dedicated support"
+        ],
+        "cta": "Contact Sales"
+      }
+    }
   },
   "DashboardPage": {
     "appName": "Basketball Coach App",

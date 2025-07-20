@@ -1,31 +1,66 @@
-import { Link } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { createClient } from "@/lib/supabase/server";
+import { Header } from "@/components/Header";
+import { HeroSection } from "@/components/HeroSection";
+import { PricingSection } from "@/components/PricingSection";
+import { AuthDebug } from "@/components/AuthDebug";
 
 export default async function LandingPage() {
   const t = await getTranslations("HomePage");
+  
+  // Check if user is authenticated
+  const supabase = await createClient();
+  
+  let user = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    
+    // Only consider user authenticated if we have a valid user and no error
+    if (!error && data?.user) {
+      user = data.user;
+    }
+  } catch (error) {
+    // If there's any error getting the user, consider them not authenticated
+    console.log('Auth check error (expected during logout):', error);
+    user = null;
+  }
+  
+  // DEBUG: Temporarily disable redirect to see what's happening
+  // TODO: Re-enable after debugging
+  // if (user) {
+  //   redirect("/dashboard");
+  // }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-orange-100">
-      <div className="flex gap-2 absolute top-4 right-4"></div>
-      <header className="mb-10 flex flex-col items-center">
-        <div className="rounded-full bg-orange-500 w-20 h-20 flex items-center justify-center mb-4 shadow-lg">
-          <span className="text-4xl text-white font-bold">🏀</span>
+    <div className="min-h-screen bg-white">
+      <AuthDebug />
+      <Header isAuthenticated={!!user} />
+      
+      <main>
+        <HeroSection />
+        <PricingSection />
+      </main>
+      
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="container mx-auto px-4 text-center">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="rounded-full bg-orange-500 w-10 h-10 flex items-center justify-center">
+              <span className="text-2xl">🏀</span>
+            </div>
+            <span className="text-xl font-bold">{t("title")}</span>
+          </div>
+          
+          <p className="text-gray-400 mb-6 max-w-md mx-auto">
+            {t("about")}
+          </p>
+          
+          <div className="border-t border-gray-800 pt-6">
+            <p className="text-gray-500 text-sm">
+              <span suppressHydrationWarning>&copy; {new Date().getFullYear()}</span> {t("footer")}. All rights reserved.
+            </p>
+          </div>
         </div>
-        <h1 className="text-4xl font-extrabold text-blue-900 mb-2 tracking-tight">
-          {t("title")}
-        </h1>
-        <p className="text-lg text-gray-700 max-w-md text-center">
-          {t("about")}
-        </p>
-      </header>
-      <Link
-        href="/auth"
-        className="px-8 py-3 rounded-full bg-blue-700 text-white text-lg font-semibold shadow-md hover:bg-blue-800 transition mb-8"
-      >
-        {t("signInRegister")}
-      </Link>
-      <footer className="mt-auto text-gray-400 text-xs py-4">
-        <span suppressHydrationWarning>&copy; {new Date().getFullYear()}</span> {t("footer")}
       </footer>
     </div>
   );
