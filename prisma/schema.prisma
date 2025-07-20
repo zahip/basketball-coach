@@ -117,15 +117,19 @@ model PlayRecording {
 }
 
 model TrainingSet {
-  id          String     @id @default(uuid())
-  name        String
-  description String?
-  team        Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId      String
-  exercises   TrainingSetExercise[]
-  practices   Practice[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id              String     @id @default(uuid())
+  name            String
+  description     String?
+  team            Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId          String
+  exercises       TrainingSetExercise[]
+  practices       Practice[]
+  totalDuration   Int?       // Total practice duration in minutes
+  warmupDuration  Int?       // Warmup section duration in minutes
+  mainDuration    Int?       // Main section duration in minutes
+  summaryDuration Int?       // Summary section duration in minutes
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 }
 
 model TrainingSetExercise {
@@ -134,9 +138,11 @@ model TrainingSetExercise {
   description   String?
   duration      Int?        // Duration in minutes
   category      String?     // "warmup", "skills", "scrimmage", "conditioning", etc.
+  section       String      @default("main") // "warmup", "main", "summary"
+  sectionOrder  Int         @default(0) // Order within the section
   trainingSet   TrainingSet @relation(fields: [trainingSetId], references: [id], onDelete: Cascade)
   trainingSetId String
-  order         Int         @default(0)
+  order         Int         @default(0) // Global order (deprecated, use sectionOrder)
   exerciseId    String?     // Reference to ExerciseTemplate if created from template
   exercise      ExerciseTemplate? @relation(fields: [exerciseId], references: [id])
   createdAt     DateTime    @default(now())

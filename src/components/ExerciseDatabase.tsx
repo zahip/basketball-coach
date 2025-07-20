@@ -4,9 +4,18 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { ExerciseMotionDesigner } from "@/components/ExerciseMotionDesigner";
+import { useTranslations } from "next-intl";
+import { Search, Filter, Plus, Clock, Dumbbell, Edit, Trash2, Target } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ExerciseTemplate {
   id: string;
@@ -40,6 +49,9 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
   const [difficultyFilter, setDifficultyFilter] = useState("");
   const [designingMotion, setDesigningMotion] = useState<ExerciseTemplate | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  
+  const t = useTranslations("ExercisesPage");
+  const tBuilder = useTranslations("TrainingBuilder");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -132,22 +144,26 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this exercise?")) {
+    if (confirm(t("confirmDelete"))) {
       deleteExerciseMutation.mutate({ id });
     }
   };
 
   const categories = [
-    { value: "warmup", label: "Warm-up" },
-    { value: "ball_handling", label: "Ball Handling" },
-    { value: "shooting", label: "Shooting" },
-    { value: "defense", label: "Defense" },
-    { value: "conditioning", label: "Conditioning" },
-    { value: "scrimmage", label: "Scrimmage" },
-    { value: "skills", label: "Skills" },
-    { value: "numerical_advantage", label: "Numerical Advantage" },
+    { value: "warmup", label: t("categories.warmup") },
+    { value: "ball_handling", label: t("categories.ball_handling") },
+    { value: "shooting", label: t("categories.shooting") },
+    { value: "defense", label: t("categories.defense") },
+    { value: "conditioning", label: t("categories.conditioning") },
+    { value: "scrimmage", label: t("categories.scrimmage") },
+    { value: "skills", label: t("categories.skills") },
+    { value: "numerical_advantage", label: t("categories.numerical_advantage") },
   ];
-  const difficulties = ["beginner", "intermediate", "advanced"];
+  const difficulties = [
+    { value: "beginner", label: t("difficulties.beginner") },
+    { value: "intermediate", label: t("difficulties.intermediate") },
+    { value: "advanced", label: t("difficulties.advanced") },
+  ];
 
   const filteredExercises = exerciseTemplates.filter((exercise) => {
     const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -158,26 +174,26 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
     return matchesSearch && matchesCategory && matchesDifficulty;
   });
 
-  const getDifficultyColor = (difficulty?: string) => {
+  const getDifficultyVariant = (difficulty?: string) => {
     switch (difficulty) {
-      case "beginner": return "bg-green-100 text-green-800";
-      case "intermediate": return "bg-yellow-100 text-yellow-800";
-      case "advanced": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "beginner": return "success" as const;
+      case "intermediate": return "warning" as const;
+      case "advanced": return "basketball" as const;
+      default: return "secondary" as const;
     }
   };
 
-  const getCategoryColor = (category?: string) => {
+  const getCategoryVariant = (category?: string) => {
     switch (category) {
-      case "warmup": return "bg-orange-100 text-orange-800";
-      case "ball_handling": return "bg-purple-100 text-purple-800";
-      case "shooting": return "bg-red-100 text-red-800";
-      case "defense": return "bg-blue-100 text-blue-800";
-      case "conditioning": return "bg-green-100 text-green-800";
-      case "scrimmage": return "bg-yellow-100 text-yellow-800";
-      case "skills": return "bg-indigo-100 text-indigo-800";
-      case "numerical_advantage": return "bg-pink-100 text-pink-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "warmup": return "basketball" as const;
+      case "ball_handling": return "court" as const;
+      case "shooting": return "destructive" as const;
+      case "defense": return "outline" as const;
+      case "conditioning": return "success" as const;
+      case "scrimmage": return "warning" as const;
+      case "skills": return "secondary" as const;
+      case "numerical_advantage": return "gradient" as const;
+      default: return "secondary" as const;
     }
   };
 
@@ -185,53 +201,91 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
     const categoryItem = categories.find(cat => cat.value === category);
     return categoryItem ? categoryItem.label : category;
   };
+  
+  const getDifficultyLabel = (difficulty?: string) => {
+    const difficultyItem = difficulties.find(diff => diff.value === difficulty);
+    return difficultyItem ? difficultyItem.label : difficulty;
+  };
 
   return (
-    <Card className="h-full">
-      <CardHeader>
+    <Card className="h-full shadow-sm">
+      <CardHeader className="pb-4">
         <CardTitle className="flex items-center justify-between">
-          <span>Exercise Database</span>
+          <div className="flex items-center gap-2">
+            <Dumbbell className="w-5 h-5 text-orange-500" />
+            <span className="text-lg font-bold">{tBuilder("showDatabase")}</span>
+          </div>
           <Button
             size="sm"
             onClick={() => setShowAddForm(!showAddForm)}
             variant={showAddForm ? "outline" : "default"}
+            className={cn(
+              "transition-all duration-200",
+              showAddForm ? "" : "bg-orange-500 hover:bg-orange-600"
+            )}
           >
-            {showAddForm ? "Cancel" : "+ Add Exercise"}
+            {showAddForm ? (
+              <>
+                {t("cancel")}
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                {t("addNewExercise")}
+              </>
+            )}
           </Button>
         </CardTitle>
         
         {/* Search and Filters */}
-        <div className="space-y-2">
-          <input
-            type="text"
-            placeholder="Search exercises..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-          />
-          <div className="flex gap-2">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-            >
-              <option value="">All Categories</option>
-              {categories.map(category => (
-                <option key={category.value} value={category.value}>{category.label}</option>
-              ))}
-            </select>
-            <select
-              value={difficultyFilter}
-              onChange={(e) => setDifficultyFilter(e.target.value)}
-              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-            >
-              <option value="">All Difficulties</option>
-              {difficulties.map(difficulty => (
-                <option key={difficulty} value={difficulty}>
-                  {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-                </option>
-              ))}
-            </select>
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder={t("searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-600 flex items-center gap-1">
+                <Filter className="w-3 h-3" />
+                {t("category")}
+              </Label>
+              <Select value={categoryFilter || undefined} onValueChange={(value) => setCategoryFilter(value || "")}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder={t("allCategories")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(category => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-600 flex items-center gap-1">
+                <Target className="w-3 h-3" />
+                {t("difficulty")}
+              </Label>
+              <Select value={difficultyFilter || undefined} onValueChange={(value) => setDifficultyFilter(value || "")}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder={t("allDifficulties")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {difficulties.map(difficulty => (
+                    <SelectItem key={difficulty.value} value={difficulty.value}>
+                      {difficulty.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -239,192 +293,306 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
       <CardContent className="space-y-4">
         {/* Add/Edit Exercise Form */}
         {showAddForm && (
-          <form onSubmit={handleSubmit} className="space-y-3 p-4 bg-gray-50 rounded-lg">
-            <input
-              type="text"
-              placeholder="Exercise name"
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-              required
-            />
-            <textarea
-              placeholder="Description"
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400 h-20 resize-none"
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({...formData, category: e.target.value})}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-              >
-                <option value="">Select category</option>
-                {categories.map(category => (
-                  <option key={category.value} value={category.value}>{category.label}</option>
-                ))}
-              </select>
-              <select
-                value={formData.difficulty}
-                onChange={(e) => setFormData({...formData, difficulty: e.target.value})}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-              >
-                <option value="">Select difficulty</option>
-                {difficulties.map(difficulty => (
-                  <option key={difficulty} value={difficulty}>
-                    {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="number"
-                placeholder="Duration (minutes)"
-                value={formData.duration}
-                onChange={(e) => setFormData({...formData, duration: e.target.value})}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-                min="1"
-              />
-              <input
+          <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-gradient-to-br from-orange-50 to-blue-50 rounded-lg border border-orange-200">
+            <div className="space-y-2">
+              <Label htmlFor="exercise-name" className="text-sm font-medium">
+                {t("exerciseNameEnglish")} *
+              </Label>
+              <Input
+                id="exercise-name"
                 type="text"
-                placeholder="Equipment needed"
-                value={formData.equipment}
-                onChange={(e) => setFormData({...formData, equipment: e.target.value})}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
+                placeholder={t("exerciseNameEnglish")}
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                required
+                className="h-9"
               />
             </div>
-            <textarea
-              placeholder="Instructions"
-              value={formData.instructions}
-              onChange={(e) => setFormData({...formData, instructions: e.target.value})}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400 h-20 resize-none"
-            />
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+            
+            <div className="space-y-2">
+              <Label htmlFor="exercise-description" className="text-sm font-medium">
+                {t("descriptionEnglish")}
+              </Label>
+              <Textarea
+                id="exercise-description"
+                placeholder={t("descriptionEnglish")}
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                className="h-20 resize-none"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">{t("selectCategory")}</Label>
+                <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder={t("selectCategory")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(category => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">{t("selectDifficulty")}</Label>
+                <Select value={formData.difficulty} onValueChange={(value) => setFormData({...formData, difficulty: value})}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder={t("selectDifficulty")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {difficulties.map(difficulty => (
+                      <SelectItem key={difficulty.value} value={difficulty.value}>
+                        {difficulty.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="duration" className="text-sm font-medium">
+                  {t("duration")}
+                </Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  placeholder={t("duration")}
+                  value={formData.duration}
+                  onChange={(e) => setFormData({...formData, duration: e.target.value})}
+                  min="1"
+                  className="h-9"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="equipment" className="text-sm font-medium">
+                  {t("requiredEquipment")}
+                </Label>
+                <Input
+                  id="equipment"
+                  type="text"
+                  placeholder={t("requiredEquipment")}
+                  value={formData.equipment}
+                  onChange={(e) => setFormData({...formData, equipment: e.target.value})}
+                  className="h-9"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="instructions" className="text-sm font-medium">
+                {t("detailedInstructionsEnglish")}
+              </Label>
+              <Textarea
+                id="instructions"
+                placeholder={t("detailedInstructionsEnglish")}
+                value={formData.instructions}
+                onChange={(e) => setFormData({...formData, instructions: e.target.value})}
+                className="h-20 resize-none"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
                 id="isPublic"
                 checked={formData.isPublic}
-                onChange={(e) => setFormData({...formData, isPublic: e.target.checked})}
-                className="rounded"
+                onCheckedChange={(checked) => setFormData({...formData, isPublic: checked as boolean})}
               />
-              <label htmlFor="isPublic" className="text-sm text-gray-700">
-                Make public (future feature)
-              </label>
+              <Label htmlFor="isPublic" className="text-sm text-gray-700">
+                {t("public")} (future feature)
+              </Label>
             </div>
-            <div className="flex gap-2">
+            
+            <div className="flex gap-2 pt-2">
               <Button
                 type="submit"
                 size="sm"
-                className="flex-1"
+                className="flex-1 bg-orange-500 hover:bg-orange-600 transition-colors"
                 disabled={createExerciseMutation.isPending || updateExerciseMutation.isPending}
               >
-                {editingExercise ? "Update" : "Add"} Exercise
+                {(createExerciseMutation.isPending || updateExerciseMutation.isPending) ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    {t("creating")}
+                  </>
+                ) : (
+                  editingExercise ? "Update Exercise" : t("createExercise")
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={resetForm}
+                className="px-6 transition-colors"
+                disabled={createExerciseMutation.isPending || updateExerciseMutation.isPending}
               >
-                Cancel
+                {t("cancel")}
               </Button>
             </div>
           </form>
         )}
 
         {/* Exercise List */}
-        <div className="space-y-2">
-          <p className="text-sm text-gray-600">
-            {filteredExercises.length} exercise{filteredExercises.length !== 1 ? 's' : ''} found
-          </p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600 font-medium">
+              {filteredExercises.length} {filteredExercises.length === 1 ? 'exercise' : 'exercises'} found
+            </p>
+            {filteredExercises.length === 0 && (
+              <Badge variant="secondary" size="sm">
+                {t("noExercisesFound")}
+              </Badge>
+            )}
+          </div>
           
           <Droppable droppableId="exercise-database">
             {(provided) => (
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="space-y-2 max-h-96 overflow-y-auto"
+                className="space-y-3 max-h-96 overflow-y-auto pr-2"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#d1d5db #f3f4f6'
+                }}
               >
-                {filteredExercises.map((exercise, index) => (
-                  <Draggable key={exercise.id} draggableId={exercise.id} index={index}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className={`p-3 border rounded-lg cursor-move transition-all ${
-                          snapshot.isDragging 
-                            ? "bg-blue-50 border-blue-300 shadow-lg" 
-                            : "bg-white border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-medium text-sm text-gray-900">{exercise.name}</span>
-                              {exercise.category && (
-                                <span className={`text-xs px-2 py-1 rounded ${getCategoryColor(exercise.category)}`}>
-                                  {getCategoryLabel(exercise.category)}
-                                </span>
+                {filteredExercises.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Dumbbell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-sm font-medium">{t("noExercisesFound")}</p>
+                    <p className="text-xs mt-1">{t("noExercisesSubtitle")}</p>
+                  </div>
+                ) : (
+                  filteredExercises.map((exercise, index) => (
+                    <Draggable key={exercise.id} draggableId={exercise.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className={cn(
+                            "group p-4 border rounded-lg cursor-move transition-all duration-200",
+                            snapshot.isDragging 
+                              ? "bg-orange-50 border-orange-300 shadow-lg scale-105 rotate-1" 
+                              : "bg-white border-gray-200 hover:border-orange-200 hover:shadow-md"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              {/* Exercise Name and Badges */}
+                              <div className="flex items-start gap-2 mb-3">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-sm text-gray-900 truncate mb-1">
+                                    {exercise.name}
+                                  </h4>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {exercise.category && (
+                                      <Badge variant={getCategoryVariant(exercise.category)} size="sm">
+                                        {getCategoryLabel(exercise.category)}
+                                      </Badge>
+                                    )}
+                                    {exercise.difficulty && (
+                                      <Badge variant={getDifficultyVariant(exercise.difficulty)} size="sm">
+                                        {getDifficultyLabel(exercise.difficulty)}
+                                      </Badge>
+                                    )}
+                                    {exercise.duration && (
+                                      <Badge variant="outline" size="sm" className="flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {exercise.duration}m
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Description */}
+                              {exercise.description && (
+                                <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                                  {exercise.description}
+                                </p>
                               )}
-                              {exercise.difficulty && (
-                                <span className={`text-xs px-2 py-1 rounded ${getDifficultyColor(exercise.difficulty)}`}>
-                                  {exercise.difficulty}
+                              
+                              {/* Additional Info */}
+                              <div className="flex items-center gap-3 text-xs text-gray-500">
+                                {exercise.equipment && (
+                                  <span className="flex items-center gap-1">
+                                    <span>🏀</span> {exercise.equipment}
+                                  </span>
+                                )}
+                                {exercise.usageCount > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    📊 Used {exercise.usageCount} times
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-400">
+                                  {t("createdBy")} {exercise.coach.name}
                                 </span>
-                              )}
+                              </div>
                             </div>
-                            {exercise.description && (
-                              <p className="text-xs text-gray-600 mb-1">{exercise.description}</p>
-                            )}
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                              {exercise.duration && <span>{exercise.duration}min</span>}
-                              {exercise.equipment && <span>• {exercise.equipment}</span>}
-                              {exercise.usageCount > 0 && <span>• Used {exercise.usageCount} times</span>}
+                            
+                            {/* Action Buttons */}
+                            <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDesigningMotion(exercise);
+                                  setSheetOpen(true);
+                                }}
+                                className="h-7 px-2 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 transition-colors"
+                                title="Design Motion"
+                              >
+                                🏀
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(exercise);
+                                }}
+                                className="h-7 px-2 text-xs hover:bg-blue-50 transition-colors"
+                                title="Edit Exercise"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(exercise.id);
+                                }}
+                                className="h-7 px-2 text-xs text-red-500 border-red-300 hover:bg-red-50 transition-colors"
+                                title="Delete Exercise"
+                                disabled={deleteExerciseMutation.isPending}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
                             </div>
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setDesigningMotion(exercise);
-                                setSheetOpen(true);
-                              }}
-                              className="text-xs px-2 py-1 h-auto text-orange-600 border-orange-300 hover:bg-orange-50"
-                            >
-                              Design Motion
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(exercise)}
-                              className="text-xs px-2 py-1 h-auto"
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDelete(exercise.id)}
-                              className="text-xs px-2 py-1 h-auto text-red-500 border-red-500 hover:bg-red-50"
-                            >
-                              Delete
-                            </Button>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
+                      )}
+                    </Draggable>
+                  ))
+                )}
                 {provided.placeholder}
               </div>
             )}
           </Droppable>
         </div>
       </CardContent>
-      
       
       {/* Basketball Court Design Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -438,10 +606,19 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
         >
           {designingMotion && (
             <div className="h-full">
-              <SheetHeader className="p-4 border-b">
-                <SheetTitle className="flex items-center gap-2">
-                  <span>🏀</span>
-                  Design Motion for: {designingMotion.name}
+              <SheetHeader className="p-6 border-b bg-gradient-to-r from-orange-50 to-blue-50">
+                <SheetTitle className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-500 rounded-lg">
+                    <span className="text-white text-lg">🏀</span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">
+                      Design Motion
+                    </h2>
+                    <p className="text-sm text-gray-600 font-normal">
+                      {designingMotion.name}
+                    </p>
+                  </div>
                 </SheetTitle>
               </SheetHeader>
               <div className="h-[calc(100vh-120px)] overflow-auto">

@@ -153,5 +153,55 @@
       "intermediate": "Intermediate",
       "advanced": "Advanced"
     }
+  },
+  "TrainingBuilder": {
+    "title": "Training Set Builder",
+    "subtitle": "Create structured basketball training sessions",
+    "backToDashboard": "← Back to Dashboard",
+    "showDatabase": "Show Exercise Database",
+    "hideDatabase": "Hide Exercise Database",
+    "createTrainingSet": "Create Training Set",
+    "creating": "Creating...",
+    "sections": {
+      "warmup": "Warmup",
+      "main": "Main Training",
+      "summary": "Summary"
+    },
+    "sectionDescriptions": {
+      "warmup": "Dynamic stretching, light ball handling, and body preparation",
+      "main": "Skills training, drills, tactics, and scrimmage",
+      "summary": "Cool-down, review, feedback, and team talk"
+    },
+    "details": {
+      "title": "Training Details",
+      "selectTeam": "Select Team",
+      "selectTeamPlaceholder": "Choose a team...",
+      "trainingName": "Training Set Name",
+      "trainingNamePlaceholder": "Enter training set name",
+      "description": "Description",
+      "descriptionPlaceholder": "Enter training set description",
+      "totalDuration": "Total Practice Duration",
+      "sectionDuration": "Section Duration",
+      "estimatedTime": "Estimated Time",
+      "remainingTime": "Remaining Time",
+      "autoAllocate": "Auto-allocate time",
+      "minutes": "minutes",
+      "min": "min"
+    },
+    "exercises": {
+      "addExercises": "Add exercises by dragging from the database",
+      "noExercises": "No exercises added yet",
+      "dragHint": "Drag exercises here to add them to this section",
+      "removeExercise": "Remove",
+      "moveExercise": "Move to",
+      "duplicateExercise": "Duplicate",
+      "exerciseCount": "exercises"
+    },
+    "validation": {
+      "nameRequired": "Training set name is required",
+      "teamRequired": "Please select a team",
+      "noExercises": "Add at least one exercise",
+      "durationExceeded": "Section duration exceeds allocated time"
+    }
   }
 } 

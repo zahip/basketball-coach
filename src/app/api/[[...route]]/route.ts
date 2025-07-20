@@ -147,7 +147,10 @@ const exerciseInputSchema = z.object({
     .optional(),
   duration: z.number().int().min(0).max(180).optional(),
   category: z.string().max(50).optional(),
-  order: z.number().int().min(0).default(0),
+  section: z.enum(["warmup", "main", "summary"]).default("main"),
+  sectionOrder: z.number().int().min(0).default(0),
+  exerciseTemplateId: z.string().uuid().optional(),
+  order: z.number().int().min(0).default(0), // Legacy field, kept for compatibility
 });
 
 const appRouter = t.router({
@@ -509,6 +512,10 @@ const appRouter = t.router({
       teamId: z.string().uuid("Invalid team ID"),
       name: z.string().min(1, "Training set name is required").max(100, "Training set name too long"),
       description: z.string().max(500).optional(),
+      totalDuration: z.number().int().min(0).max(300).optional(),
+      warmupDuration: z.number().int().min(0).max(60).optional(),
+      mainDuration: z.number().int().min(0).max(240).optional(),
+      summaryDuration: z.number().int().min(0).max(60).optional(),
       exercises: z.array(exerciseInputSchema).default([]),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -541,19 +548,29 @@ const appRouter = t.router({
           name: sanitizedInput.name,
           description: sanitizedInput.description,
           teamId: sanitizedInput.teamId,
+          totalDuration: sanitizedInput.totalDuration,
+          warmupDuration: sanitizedInput.warmupDuration,
+          mainDuration: sanitizedInput.mainDuration,
+          summaryDuration: sanitizedInput.summaryDuration,
           exercises: {
             create: sanitizedInput.exercises.map((exercise, index) => ({
               name: exercise.name,
               description: exercise.description,
               duration: exercise.duration,
               category: exercise.category,
-              order: exercise.order || index,
+              section: exercise.section,
+              sectionOrder: exercise.sectionOrder,
+              order: exercise.order || index, // Legacy field for compatibility
+              exerciseId: exercise.exerciseTemplateId,
             }))
           }
         },
         include: {
           exercises: {
-            orderBy: { order: 'asc' }
+            orderBy: [
+              { section: 'asc' },
+              { sectionOrder: 'asc' }
+            ]
           }
         }
       });

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export function AuthDebug() {
-  const [authState, setAuthState] = useState<{user?: unknown; error?: string; event?: string} | null>(null);
+  const [authState, setAuthState] = useState<{user?: {id: string} | null; error?: string; event?: string} | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -13,7 +13,7 @@ export function AuthDebug() {
         const { data, error } = await supabase.auth.getUser();
         setAuthState({ user: data.user, error: error?.message });
       } catch (err) {
-        setAuthState({ error: err });
+        setAuthState({ error: err instanceof Error ? err.message : 'Unknown error' });
       } finally {
         setLoading(false);
       }

@@ -155,5 +155,55 @@
       "intermediate": "בינוני",
       "advanced": "מתקדם"
     }
+  },
+  "TrainingBuilder": {
+    "title": "בונה מערכי אימון",
+    "subtitle": "צור מפגשי אימון מובנים בכדורסל",
+    "backToDashboard": "← חזרה ללוח הבקרה",
+    "showDatabase": "הצג מאגר תרגילים",
+    "hideDatabase": "הסתר מאגר תרגילים",
+    "createTrainingSet": "צור מערך אימון",
+    "creating": "יוצר...",
+    "sections": {
+      "warmup": "חימום",
+      "main": "אימון מרכזי",
+      "summary": "סיכום"
+    },
+    "sectionDescriptions": {
+      "warmup": "מתיחות דינמיות, טיפול קל בכדור והכנת הגוף",
+      "main": "אימון מיומנויות, תרגילים, טקטיקה ומשחק",
+      "summary": "התקררות, סיכום, משוב ושיחת קבוצה"
+    },
+    "details": {
+      "title": "פרטי האימון",
+      "selectTeam": "בחר קבוצה",
+      "selectTeamPlaceholder": "בחר קבוצה...",
+      "trainingName": "שם מערך האימון",
+      "trainingNamePlaceholder": "הכנס שם מערך אימון",
+      "description": "תיאור",
+      "descriptionPlaceholder": "הכנס תיאור מערך האימון",
+      "totalDuration": "משך האימון הכולל",
+      "sectionDuration": "משך הקטע",
+      "estimatedTime": "זמן משוער",
+      "remainingTime": "זמן נותר",
+      "autoAllocate": "חלק זמן אוטומטית",
+      "minutes": "דקות",
+      "min": "דק׳"
+    },
+    "exercises": {
+      "addExercises": "הוסף תרגילים על ידי גרירה ממאגר התרגילים",
+      "noExercises": "לא נוספו תרגילים עדיין",
+      "dragHint": "גרור תרגילים לכאן כדי להוסיף אותם לקטע זה",
+      "removeExercise": "הסר",
+      "moveExercise": "העבר ל",
+      "duplicateExercise": "שכפל",
+      "exerciseCount": "תרגילים"
+    },
+    "validation": {
+      "nameRequired": "שם מערך האימון נדרש",
+      "teamRequired": "אנא בחר קבוצה",
+      "noExercises": "הוסף לפחות תרגיל אחד",
+      "durationExceeded": "משך הקטע חורג מהזמן המוקצה"
+    }
   }
 } 
