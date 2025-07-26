@@ -1,13 +1,14 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 
 export function LanguageSwitcher({ locale }: { locale: string }) {
   const t = useTranslations("LanguageSwitcher");
+  const pathname = usePathname();
   return (
     <div className="fixed bottom-4 left-4 z-50 flex gap-2">
       <Link
-        href="/"
+        href={pathname}
         locale="en"
         className={`px-3 py-1 min-w-[60px] rounded-lg border shadow-sm transition text-sm font-medium flex items-center justify-center
           ${
@@ -24,7 +25,7 @@ export function LanguageSwitcher({ locale }: { locale: string }) {
         {t("en")}
       </Link>
       <Link
-        href="/"
+        href={pathname}
         locale="he"
         className={`px-3 py-1 min-w-[60px] rounded-lg border shadow-sm transition text-sm font-medium flex items-center justify-center
           ${
