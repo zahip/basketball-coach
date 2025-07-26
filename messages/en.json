@@ -203,5 +203,45 @@
       "noExercises": "Add at least one exercise",
       "durationExceeded": "Section duration exceeds allocated time"
     }
+  },
+  "TrainingPlan": {
+    "title": "Training Plan",
+    "backToTeam": "Back to Team",
+    "backToDashboard": "Back to Dashboard",
+    "notFound": {
+      "title": "Training plan not found",
+      "description": "The requested training plan could not be found or you don't have access to it."
+    },
+    "loading": "Loading training plan...",
+    "summary": {
+      "title": "Training Summary",
+      "totalDuration": "Total Duration (min)",
+      "totalExercises": "Total Exercises", 
+      "warmupExercises": "Warm-up Exercises",
+      "mainExercises": "Main Exercises"
+    },
+    "sections": {
+      "warmup": {
+        "title": "Warm-up",
+        "description": "Preparation and activation exercises"
+      },
+      "main": {
+        "title": "Main Training", 
+        "description": "Skills training, drills, tactics, and scrimmage"
+      },
+      "summary": {
+        "title": "Cool Down",
+        "description": "Recovery and reflection exercises"
+      }
+    },
+    "exercise": {
+      "minutes": "minutes",
+      "duration": "Duration"
+    },
+    "meta": {
+      "createdOn": "Created",
+      "team": "Team",
+      "exercises": "exercises"
+    }
   }
 } 

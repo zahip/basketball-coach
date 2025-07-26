@@ -205,5 +205,45 @@
       "noExercises": "הוסף לפחות תרגיל אחד",
       "durationExceeded": "משך הקטע חורג מהזמן המוקצה"
     }
+  },
+  "TrainingPlan": {
+    "title": "תוכנית אימון",
+    "backToTeam": "חזור לקבוצה",
+    "backToDashboard": "חזור לדשבורד",
+    "notFound": {
+      "title": "תוכנית האימון לא נמצאה",
+      "description": "תוכנית האימון המבוקשת לא נמצאה או שאין לך גישה אליה."
+    },
+    "loading": "טוען תוכנית אימון...",
+    "summary": {
+      "title": "סיכום האימון",
+      "totalDuration": "משך כולל (דק׳)",
+      "totalExercises": "סה״כ תרגילים",
+      "warmupExercises": "תרגילי חימום",
+      "mainExercises": "תרגילים עיקריים"
+    },
+    "sections": {
+      "warmup": {
+        "title": "חימום",
+        "description": "תרגילי הכנה והפעלה"
+      },
+      "main": {
+        "title": "אימון עיקרי",
+        "description": "אימון כישורים, תרגילים, טקטיקות ומשחק"
+      },
+      "summary": {
+        "title": "קירור",
+        "description": "תרגילי התאוששות והשתקפות"
+      }
+    },
+    "exercise": {
+      "minutes": "דקות",
+      "duration": "משך"
+    },
+    "meta": {
+      "createdOn": "נוצר ב",
+      "team": "קבוצה",
+      "exercises": "תרגילים"
+    }
   }
 } 

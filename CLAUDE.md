@@ -44,3 +44,20 @@
 - Supabase authentication integrated
 - Auth pages at `/auth` and `/[locale]/auth`
 - Dashboard at `/[locale]/dashboard`
+
+
+## Internationalization (i18n)
+- **ALWAYS** use next-intl for all user-facing text
+- **NEVER** hardcode strings in components
+- Use `useTranslations()` hook in components
+- Use `getTranslations()` in server components
+- All text must be defined in `/messages/[locale].json`
+- Default locale is [your default locale]
+- Supported locales: [list your locales]
+
+### Translation Requirements
+- Every new feature MUST include translations
+- Every text string MUST use translation keys
+- Example: `t('dashboard.welcome')` not `"Welcome"`
+
+

@@ -646,6 +646,49 @@ const appRouter = t.router({
 
     return { trainingSets: allTrainingSets };
   }),
+  getTrainingSetById: protectedProcedure
+    .input(z.object({ id: z.string().uuid("Invalid training set ID") }))
+    .query(async ({ input, ctx }) => {
+      const { user } = ctx;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { supabaseId: user.id }
+      });
+      if (!dbUser) {
+        throw createSecureError('User not found in database', 404);
+      }
+
+      const trainingSet = await prisma.trainingSet.findFirst({
+        where: {
+          id: input.id,
+          team: {
+            coach: {
+              userId: dbUser.id
+            }
+          }
+        },
+        include: {
+          exercises: {
+            orderBy: [
+              { section: 'asc' },
+              { sectionOrder: 'asc' }
+            ]
+          },
+          team: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
+        }
+      });
+
+      if (!trainingSet) {
+        throw createSecureError('Training set not found or access denied', 404);
+      }
+
+      return { trainingSet };
+    }),
   createExerciseTemplate: protectedProcedure
     .input(z.object({
       name: z.string().min(1, "Exercise name is required").max(100, "Exercise name too long"),
