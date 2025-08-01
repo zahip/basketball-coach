@@ -459,8 +459,9 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="space-y-3 max-h-96 overflow-y-auto pr-2"
+                className="space-y-3 overflow-y-auto pr-2"
                 style={{
+                  maxHeight: 'calc(100vh - 350px)',
                   scrollbarWidth: 'thin',
                   scrollbarColor: '#d1d5db #f3f4f6'
                 }}
@@ -511,6 +512,26 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
                                         {exercise.duration}m
                                       </Badge>
                                     )}
+                                    {/* Section compatibility badges */}
+                                    {(() => {
+                                      const categoryToSectionMap: Record<string, string[]> = {
+                                        "warmup": ["W"],
+                                        "ball_handling": ["W", "M"],
+                                        "shooting": ["M"],
+                                        "defense": ["M"],
+                                        "conditioning": ["M", "S"],
+                                        "scrimmage": ["M"],
+                                        "skills": ["M"],
+                                        "numerical_advantage": ["M"],
+                                      };
+                                      const allowedSections = categoryToSectionMap[exercise.category || ""] || ["M"];
+                                      return allowedSections.map(section => (
+                                        <Badge key={section} variant="secondary" size="sm" className="text-xs h-5 px-1">
+                                          {section}
+                                        </Badge>
+                                      ));
+                                    })()
+                                  }
                                   </div>
                                 </div>
                               </div>
@@ -530,8 +551,15 @@ export function ExerciseDatabase({ onRefetch, exerciseTemplates }: ExerciseDatab
                                   </span>
                                 )}
                                 {exercise.usageCount > 0 && (
-                                  <span className="flex items-center gap-1">
+                                  <span className={cn(
+                                    "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium",
+                                    exercise.usageCount >= 10 ? "bg-green-100 text-green-700" :
+                                    exercise.usageCount >= 5 ? "bg-blue-100 text-blue-700" :
+                                    "bg-gray-100 text-gray-600"
+                                  )}>
                                     📊 Used {exercise.usageCount} times
+                                    {exercise.usageCount >= 10 && " 🔥"}
+                                    {exercise.usageCount >= 20 && " ⭐"}
                                   </span>
                                 )}
                                 <span className="text-xs text-gray-400">

@@ -140,11 +140,32 @@ export function TrainingSetBuilder({ }: TrainingSetBuilderProps) {
     },
   });
 
-  const handleDragEnd = (result: {
-    destination?: { index: number; droppableId: string };
-    source: { index: number; droppableId: string };
-    draggableId: string;
-  }) => {
+
+  // Helper function to check if exercise can be dropped in section
+  const canDropInSection = (exerciseId: string, targetSection: TrainingSection): boolean => {
+    const exerciseTemplate = exerciseTemplatesData?.exerciseTemplates.find(
+      (ex: any) => ex.id === exerciseId // eslint-disable-line @typescript-eslint/no-explicit-any
+    );
+    
+    if (!exerciseTemplate) return false;
+    
+    // Section-specific constraints based on exercise category
+    const categoryToSectionMap: Record<string, TrainingSection[]> = {
+      "warmup": ["warmup"],
+      "ball_handling": ["warmup", "main"],
+      "shooting": ["main"],
+      "defense": ["main"],
+      "conditioning": ["main", "summary"],
+      "scrimmage": ["main"],
+      "skills": ["main"],
+      "numerical_advantage": ["main"],
+    };
+    
+    const allowedSections = categoryToSectionMap[exerciseTemplate.category || ""] || ["main"];
+    return allowedSections.includes(targetSection);
+  };
+
+  const handleDragEnd = (result: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (!result.destination) return;
 
     const { source, destination } = result;
@@ -153,12 +174,19 @@ export function TrainingSetBuilder({ }: TrainingSetBuilderProps) {
     if (source.droppableId === "exercise-database" && 
         (destination.droppableId === "warmup" || destination.droppableId === "main" || destination.droppableId === "summary")) {
       
+      const targetSection = destination.droppableId as TrainingSection;
+      
+      // Check if exercise can be dropped in this section
+      if (!canDropInSection(result.draggableId, targetSection)) {
+        console.log(`Exercise cannot be dropped in ${targetSection} section`);
+        return; // Prevent the drop
+      }
+      
       const exerciseTemplate = exerciseTemplatesData?.exerciseTemplates.find(
-        (ex) => ex.id === result.draggableId
+        (ex: any) => ex.id === result.draggableId // eslint-disable-line @typescript-eslint/no-explicit-any
       );
       
       if (exerciseTemplate) {
-        const targetSection = destination.droppableId as TrainingSection;
         const existingExercisesInSection = getExercisesBySection(targetSection);
         
         const newExercise: ExerciseInSet = {
@@ -320,9 +348,9 @@ export function TrainingSetBuilder({ }: TrainingSetBuilderProps) {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Main Training Builder - Left Column */}
-            <div className="lg:col-span-3 space-y-6">
+            <div className="space-y-6">
               {/* Training Set Details */}
               <Card>
                 <CardHeader>
@@ -591,9 +619,9 @@ export function TrainingSetBuilder({ }: TrainingSetBuilderProps) {
               })}
             </div>
 
-            {/* Exercise Database - Right Sidebar */}
+            {/* Exercise Database - Right Sidebar - Sticky */}
             {showExerciseDatabase && (
-              <div className="lg:col-span-1">
+              <div className="sticky top-24 h-[calc(100vh-120px)]">
                 <ExerciseDatabase
                   onRefetch={refetchExercises}
                   exerciseTemplates={exerciseTemplatesData?.exerciseTemplates || []}
